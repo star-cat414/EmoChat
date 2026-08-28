@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --border: #e5e7eb;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --accent: #eef2ff;
+  --accent-foreground: #3730a3;
+  --ring: #c7d2fe;
+  --destructive: #dc2626;
+
+  /* Emotion colors */
+  --emotion-happy: #16a34a;
+  --emotion-happy-bg: #f0fdf4;
+  --emotion-sad: #2563eb;
+  --emotion-sad-bg: #eff6ff;
+  --emotion-angry: #dc2626;
+  --emotion-angry-bg: #fef2f2;
+  --emotion-fear: #9333ea;
+  --emotion-fear-bg: #faf5ff;
+  --emotion-surprise: #ea580c;
+  --emotion-surprise-bg: #fff7ed;
+  --emotion-neutral: #6b7280;
+  --emotion-neutral-bg: #f3f4f6;
+}
+
+.dark {
+  --background: #0b1220;
+  --foreground: #e5e7eb;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
+  --border: #1f2937;
+  --card: #111827;
+  --card-foreground: #f3f4f6;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --accent: #1e1b4b;
+  --accent-foreground: #c7d2fe;
+  --ring: #312e81;
+  --destructive: #f87171;
+
+  --emotion-happy: #4ade80;
+  --emotion-happy-bg: #052e16;
+  --emotion-sad: #60a5fa;
+  --emotion-sad-bg: #082f49;
+  --emotion-angry: #f87171;
+  --emotion-angry-bg: #4c0519;
+  --emotion-fear: #c084fc;
+  --emotion-fear-bg: #3b0764;
+  --emotion-surprise: #fb923c;
+  --emotion-surprise-bg: #431407;
+  --emotion-neutral: #9ca3af;
+  --emotion-neutral-bg: #1f2937;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+
+  --color-emotion-happy: var(--emotion-happy);
+  --color-emotion-happy-bg: var(--emotion-happy-bg);
+  --color-emotion-sad: var(--emotion-sad);
+  --color-emotion-sad-bg: var(--emotion-sad-bg);
+  --color-emotion-angry: var(--emotion-angry);
+  --color-emotion-angry-bg: var(--emotion-angry-bg);
+  --color-emotion-fear: var(--emotion-fear);
+  --color-emotion-fear-bg: var(--emotion-fear-bg);
+  --color-emotion-surprise: var(--emotion-surprise);
+  --color-emotion-surprise-bg: var(--emotion-surprise-bg);
+  --color-emotion-neutral: var(--emotion-neutral);
+  --color-emotion-neutral-bg: var(--emotion-neutral-bg);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-lg: 0.75rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.375rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--border);
+}

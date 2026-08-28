@@ -1,0 +1,6 @@
+INFO:     Started server process [13256]
+INFO:     Waiting for application startup.
+2026-08-28 18:06:41,067 [INFO] emochat: Trained NGram+HMM on 120 samples | {'happy': 20, 'sad': 20, 'angry': 20, 'fear': 20, 'surprise': 20, 'neutral': 20}
+2026-08-28 18:06:41,070 [INFO] emochat: Emotion model loaded: NGram-HMM
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
