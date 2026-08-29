@@ -3,62 +3,59 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #111827;
-  --muted: #f3f4f6;
-  --muted-foreground: #6b7280;
-  --border: #e5e7eb;
+  /* Surfaces */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
   --card: #ffffff;
-  --card-foreground: #111827;
-  --primary: #4f46e5;
+  --card-foreground: #0f172a;
+  --primary: #6366f1;
   --primary-foreground: #ffffff;
   --accent: #eef2ff;
-  --accent-foreground: #3730a3;
-  --ring: #c7d2fe;
-  --destructive: #dc2626;
+  --accent-foreground: #4f46e5;
+  --ring: #6366f1;
+  --destructive: #ef4444;
+  --success: #10b981;
+  --success-foreground: #ffffff;
 
-  /* Emotion colors */
-  --emotion-happy: #16a34a;
-  --emotion-happy-bg: #f0fdf4;
-  --emotion-sad: #2563eb;
-  --emotion-sad-bg: #eff6ff;
-  --emotion-angry: #dc2626;
-  --emotion-angry-bg: #fef2f2;
-  --emotion-fear: #9333ea;
-  --emotion-fear-bg: #faf5ff;
-  --emotion-surprise: #ea580c;
-  --emotion-surprise-bg: #fff7ed;
-  --emotion-neutral: #6b7280;
-  --emotion-neutral-bg: #f3f4f6;
+  /* Fallback ambient (unused in light theme) */
+  --glow-1: #eef2ff;
+  --glow-2: #eef2ff;
+  --glow-3: #eef2ff;
+
+  /* Emotion colors (semantic only) */
+  --emotion-happy: #f59e0b;
+  --emotion-happy-bg: #fef3c7;
+  --emotion-sad: #3b82f6;
+  --emotion-sad-bg: #dbeafe;
+  --emotion-angry: #ef4444;
+  --emotion-angry-bg: #fee2e2;
+  --emotion-fear: #8b5cf6;
+  --emotion-fear-bg: #ede9fe;
+  --emotion-surprise: #f97316;
+  --emotion-surprise-bg: #ffedd5;
+  --emotion-neutral: #64748b;
+  --emotion-neutral-bg: #e2e8f0;
 }
 
 .dark {
-  --background: #0b1220;
-  --foreground: #e5e7eb;
-  --muted: #1f2937;
-  --muted-foreground: #9ca3af;
-  --border: #1f2937;
-  --card: #111827;
-  --card-foreground: #f3f4f6;
-  --primary: #6366f1;
-  --primary-foreground: #ffffff;
-  --accent: #1e1b4b;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --border: #1e293b;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --primary: #818cf8;
+  --primary-foreground: #0f172a;
+  --accent: #312e81;
   --accent-foreground: #c7d2fe;
-  --ring: #312e81;
+  --ring: #6366f1;
   --destructive: #f87171;
-
-  --emotion-happy: #4ade80;
-  --emotion-happy-bg: #052e16;
-  --emotion-sad: #60a5fa;
-  --emotion-sad-bg: #082f49;
-  --emotion-angry: #f87171;
-  --emotion-angry-bg: #4c0519;
-  --emotion-fear: #c084fc;
-  --emotion-fear-bg: #3b0764;
-  --emotion-surprise: #fb923c;
-  --emotion-surprise-bg: #431407;
-  --emotion-neutral: #9ca3af;
-  --emotion-neutral-bg: #1f2937;
+  --success: #34d399;
+  --success-foreground: #022c22;
 }
 
 @theme inline {
@@ -75,22 +72,19 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
 
   --color-emotion-happy: var(--emotion-happy);
-  --color-emotion-happy-bg: var(--emotion-happy-bg);
   --color-emotion-sad: var(--emotion-sad);
-  --color-emotion-sad-bg: var(--emotion-sad-bg);
   --color-emotion-angry: var(--emotion-angry);
-  --color-emotion-angry-bg: var(--emotion-angry-bg);
   --color-emotion-fear: var(--emotion-fear);
-  --color-emotion-fear-bg: var(--emotion-fear-bg);
   --color-emotion-surprise: var(--emotion-surprise);
-  --color-emotion-surprise-bg: var(--emotion-surprise-bg);
   --color-emotion-neutral: var(--emotion-neutral);
-  --color-emotion-neutral-bg: var(--emotion-neutral-bg);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
   --radius-lg: 0.75rem;
   --radius-md: 0.5rem;
   --radius-sm: 0.375rem;
@@ -104,4 +98,72 @@ body {
 
 * {
   border-color: var(--border);
+}
+
+/* ---------------------------------------------------------------------------
+   Light, minimal surfaces. Class names retained so component code stays valid;
+   values are now clean white cards with subtle borders and soft shadows.
+   --------------------------------------------------------------------------- */
+
+/* `glass` -> neutral surface card */
+.glass {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+/* `glass-strong` -> elevated surface (modals / top nav / drawers) */
+.glass-strong {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+}
+
+/* `glass-pill` -> subtle input/control surface */
+.glass-pill {
+  background: var(--muted);
+  border: 1px solid transparent;
+}
+
+/* `emotion-ring` -> subtle avatar ring in light theme */
+.emotion-ring {
+  padding: 0;
+  border-radius: 9999px;
+  background: transparent;
+}
+
+/* Pulsing activity dot (online / live state) */
+.pulse-dot {
+  position: relative;
+  display: inline-flex;
+}
+.pulse-dot::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.4;
+  animation: pulse-ring 1.8s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(0.6); opacity: 0.45; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+
+/* Soft text shadow accent (light) */
+.text-glow {
+  text-shadow: none;
+}
+
+/* Thin scrollbars */
+.glass-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.glass-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+.glass-scroll::-webkit-scrollbar-track { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot::before { animation: none; }
 }

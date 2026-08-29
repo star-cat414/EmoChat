@@ -6,8 +6,6 @@ import { Search, X } from "lucide-react";
 
 import { openOrCreateConversation, searchUsers } from "@/app/chats/actions";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 interface SearchUser {
   id: string;
@@ -57,18 +55,18 @@ export function UserSearchModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-20"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-24"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl border border-border bg-card shadow-xl"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h2 className="font-semibold">New Chat</h2>
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <h2 className="font-bold text-foreground">New Chat</h2>
           <button
             onClick={onClose}
-            className="rounded-md p-1 text-muted-foreground hover:bg-muted"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -76,43 +74,41 @@ export function UserSearchModal({
         </div>
 
         <div className="relative p-4">
-          <Search className="absolute left-7 top-[26px] h-4 w-4 text-muted-foreground" />
-          <Input
+          <Search className="pointer-events-none absolute left-8 top-[26px] h-4 w-4 text-muted-foreground" />
+          <input
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search username..."
-            className="pl-9"
+            placeholder="Search username…"
+            className="h-11 w-full rounded-xl border border-border bg-muted pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
           />
         </div>
 
-        <div className="max-h-80 overflow-y-auto pb-2">
+        <div className="glass-scroll max-h-80 overflow-y-auto pb-2">
           {loading && (
-            <p className="px-4 py-3 text-sm text-muted-foreground">Searching...</p>
+            <p className="px-5 py-3 text-sm text-muted-foreground">Searching…</p>
           )}
           {!loading && query.trim() && results.length === 0 && (
-            <p className="px-4 py-3 text-sm text-muted-foreground">
-              No users found.
-            </p>
+            <p className="px-5 py-3 text-sm text-muted-foreground">No users found.</p>
           )}
           {results.map((u) => (
             <button
               key={u.id}
               onClick={() => open(u.id)}
               disabled={busy !== null}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-60"
+              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-60"
             >
-              <Avatar src={u.avatar_url}>
+              <Avatar src={u.avatar_url} size="sm">
                 {initialsOf(u.username)}
               </Avatar>
               <div className="min-w-0">
-                <p className="font-medium">{u.username}</p>
+                <p className="font-semibold text-foreground">{u.username}</p>
                 {u.bio && (
                   <p className="truncate text-sm text-muted-foreground">{u.bio}</p>
                 )}
               </div>
               {busy === u.id && (
-                <span className="ml-auto text-xs text-muted-foreground">Opening...</span>
+                <span className="ml-auto text-xs text-muted-foreground">Opening…</span>
               )}
             </button>
           ))}

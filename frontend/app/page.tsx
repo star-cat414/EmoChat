@@ -34,17 +34,19 @@ export default function HomePage() {
       </header>
 
       <section className="mx-auto flex max-w-6xl flex-1 flex-col items-center px-6 pt-16 pb-20 text-center">
-        <h1 className="max-w-3xl text-5xl font-bold tracking-tight sm:text-6xl">
+        <span className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-white px-3.5 py-1.5 text-xs font-medium text-primary shadow-sm">
+          <MessageCircle className="h-3.5 w-3.5" />
+          Realtime messaging · N-Gram + HMM emotion intelligence
+        </span>
+        <h1 className="max-w-3xl text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
           Chat normally.
           <br />
-          <span className="bg-gradient-to-r from-primary to-emotion-happy bg-clip-text text-transparent">
-            Understand emotions
-          </span>{" "}
-          intelligently.
+          Understand emotions{" "}
+          <span className="text-primary">intelligently.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground">
-          An intelligent messaging platform that analyzes text and voice
-          conversations using N-Gram language models and Hidden Markov Models.
+          EmoChat combines real-time messaging with N-Gram and Hidden Markov Model
+          based emotion analysis — for text and voice, in Myanmar and English.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Link href="/register">
@@ -53,7 +55,7 @@ export default function HomePage() {
             </Button>
           </Link>
           <Link href="/login">
-            <Button size="lg" variant="outline">
+            <Button size="lg" className="bg-accent text-accent-foreground hover:bg-indigo-100">
               Login
             </Button>
           </Link>
@@ -70,7 +72,7 @@ export default function HomePage() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-sm text-muted-foreground">
-        EmoChat — Final Year NLP / IT Project
+        AMT Co., Ltd. &copy; {new Date().getFullYear()} All rights reserved. 
       </footer>
     </main>
   );

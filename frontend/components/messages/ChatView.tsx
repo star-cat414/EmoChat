@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Send } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, Send, Paperclip, Smile, ChevronRight, Phone } from "lucide-react";
 
 import { createClient } from "@/lib/supabaseClient";
 import { predictEmotion } from "@/lib/api";
@@ -10,6 +11,7 @@ import type { EmotionLabel, Prediction } from "@/lib/emotions";
 import { MessageBubble, type MessageBubbleData } from "@/components/messages/MessageBubble";
 import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
 import { VoiceCallPanel } from "@/components/calls/VoiceCallPanel";
+import { NGramAutocomplete } from "@/components/chat/NGramAutocomplete";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -50,7 +52,25 @@ export function ChatView({
   const [analyzing, setAnalyzing] = useState(false);
   const [emotions, setEmotions] = useState<Record<string, Prediction>>({});
   const [online, setOnline] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // N-Gram autocomplete pick: insert a suggested next-word into the composer.
+  const handlePick = useCallback((word: string) => {
+    setText((prev) => {
+      const trimmedPrev = prev.trimEnd();
+      const sep = trimmedPrev && trimmedPrev.length > 0 ? " " : "";
+      const next = `${trimmedPrev}${sep}${word}`;
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+      return next;
+    });
+  }, []);
+
+  // Show the N-Gram predictor when the composer ends on a word boundary so it
+  // can suggest the next word (least intrusive: only after a trailing space).
+  const activeWord = text.endsWith(" ");
 
   // Track a stable ordered list of past emotions for HMM context.
   const emotionsOrder = useRef<EmotionLabel[]>([]);
@@ -215,29 +235,36 @@ export function ChatView({
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-56px)] max-w-4xl flex-col">
+    <div className="mx-auto flex h-[calc(100vh-14rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm md:h-[calc(100vh-10rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")} className="md:hidden" aria-label="Back">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <Avatar src={other.avatar_url}>
+        <Avatar src={other.avatar_url} size="md">
           {initialsOf(other.username)}
         </Avatar>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium">{other.username}</p>
-          <p className="text-xs text-muted-foreground">
-            {online ? "● Online" : "1-to-1 conversation"}
+          <p className="truncate font-semibold text-foreground">{other.username}</p>
+          <p className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className={cn("h-1.5 w-1.5 rounded-full", online ? "bg-success" : "bg-slate-300")} />
+            {online ? "Online" : "Offline"}
           </p>
         </div>
         <a
           href={`/analytics/conversation/${conversationId}`}
-          className={cn(
-            "inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors hover:bg-muted"
-          )}
+          className="inline-flex h-10 items-center justify-center gap-1 rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          Analytics
+          Mood
+          <ChevronRight className="h-4 w-4" />
         </a>
+        <button
+          type="button"
+          aria-label="Call"
+          className="hidden h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
+        >
+          <Phone className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Voice calls */}
@@ -249,11 +276,14 @@ export function ChatView({
       />
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto px-4 py-4">
+      <div
+        ref={scrollRef}
+        className="glass-scroll flex-1 space-y-2 overflow-y-auto px-4 py-5"
+      >
         {loading ? (
-          <p className="text-center text-sm text-muted-foreground py-10">Loading...</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>
         ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-muted-foreground py-10">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             Say hi to {other.username}!
           </p>
         ) : (
@@ -266,38 +296,74 @@ export function ChatView({
             />
           ))
         )}
-        {analyzing && (
-          <p className="text-right text-xs text-muted-foreground">Analyzing emotion...</p>
-        )}
+        <AnimatePresence>
+          {analyzing && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-right text-xs text-muted-foreground"
+            >
+              Decoding emotion…
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Composer */}
-      <div className="border-t border-border px-4 py-3">
-        <div className="flex items-end gap-2">
-          <VoiceRecorder
-            conversationId={conversationId}
-            currentUserId={currentUserId}
-            onAdded={(msg) =>
-              setMessages((prev) =>
-                prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
-              )
-            }
-          />
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onKeyDown}
-            placeholder="Type a message..."
-            rows={1}
-            className="max-h-32 flex-1 resize-none rounded-xl border border-border bg-transparent px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <Button onClick={sendMessage} disabled={sending || !text.trim()} aria-label="Send">
-            {sending ? (
-              <span className="text-xs">Sending...</span>
-            ) : (
-              <Send className="h-4 w-4" />
+      <div className="border-t border-border bg-background px-4 py-3">
+        <div className="mx-auto max-w-2xl">
+          <AnimatePresence>
+            {activeWord && (
+              <NGramAutocomplete
+                text={text}
+                activeWord={activeWord}
+                onPick={handlePick}
+              />
             )}
-          </Button>
+          </AnimatePresence>
+          <div className="flex items-end gap-2 rounded-2xl border border-border bg-muted px-3 py-2 focus-within:border-primary">
+            <VoiceRecorder
+              conversationId={conversationId}
+              currentUserId={currentUserId}
+              onAdded={(msg) =>
+                setMessages((prev) =>
+                  prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]
+                )
+              }
+            />
+            <button
+              type="button"
+              aria-label="Attach"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder="Type a message…"
+              rows={1}
+              className="max-h-32 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+            />
+            <button
+              type="button"
+              aria-label="Emoji"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Smile className="h-4 w-4" />
+            </button>
+            <button
+              onClick={sendMessage}
+              disabled={sending || !text.trim()}
+              aria-label="Send"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-primary"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

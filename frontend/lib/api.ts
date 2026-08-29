@@ -137,3 +137,73 @@ export async function callEmotion(
     return null;
   }
 }
+
+export interface NGramSuggestion {
+  word: string;
+  probability: number;
+  order: number;
+}
+
+export interface NGramCompleteResult {
+  text: string;
+  prefix: string[];
+  suggestions: NGramSuggestion[];
+}
+
+/** N-Gram next-word prediction for the smart input bar. Returns empty list on failure. */
+export async function ngramComplete(
+  text: string,
+  topK = 4
+): Promise<NGramSuggestion[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/ngram/complete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, top_k: topK }),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as NGramCompleteResult;
+    return data.suggestions ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export interface HMMTransitionRow {
+  [emotion: string]: number;
+}
+
+export interface NGramTransitionSample {
+  context: string[];
+  word: string;
+  count: number;
+  probability: number;
+}
+
+export interface ModelMetricsPayload {
+  model: string;
+  model_version: string;
+  dataset_size: number;
+  vocab_size: number;
+  emotion_distribution: Record<string, number>;
+  hmm: {
+    states: string[];
+    transition_matrix: HMMTransitionRow[] | null;
+    initial: Record<string, number> | null;
+  };
+  ngram: {
+    bigram_samples: NGramTransitionSample[];
+    trigram_samples: NGramTransitionSample[];
+  };
+}
+
+/** Model internals (HMM matrix + N-Gram transitions) for the metrics drawer. */
+export async function fetchModelMetrics(): Promise<ModelMetricsPayload | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/model/metrics`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}

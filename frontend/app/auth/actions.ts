@@ -8,41 +8,69 @@ import { createClient } from "@/lib/supabase";
 export type AuthState = { error: string | null; ok?: boolean };
 
 /**
- * Request an OTP (one-time code) for the given email. Used by both login and
- * register flows. If `username` is provided (registration), it is stored in
- * user metadata so the signup trigger can set a friendly username.
+ * LOGIN — password-based (no OTP).
  */
-export async function otpRequest(_prev: AuthState, formData: FormData): Promise<AuthState> {
+export async function login(_prev: AuthState, formData: FormData): Promise<AuthState> {
+  const supabase = await createClient();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "");
+
+  if (!email || !password) return { error: "Email and password are required" };
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: error.message };
+
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
+/**
+ * SIGNUP STEP 1 — send an OTP code to the email. No account is created yet.
+ * The password + username are carried to the verify step via the form.
+ */
+export async function signupSendOtp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const supabase = await createClient();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
 
   if (!email) return { error: "Email is required" };
-  if (username && !/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+  if (password.length < 6) {
+    return { error: "Password must be at least 6 characters" };
+  }
+  if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
     return { error: "Username must be 3-24 chars (letters, numbers, underscore)" };
   }
 
-  const options: { emailRedirectTo?: string; data?: { username?: string } } = {};
-  if (username) options.data = { username };
-
-  const { error } = await supabase.auth.signInWithOtp({ email, options });
+  // Store signup intent so the verify step can complete account creation.
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      data: { username },
+      shouldCreateUser: true,
+    },
+  });
   if (error) return { error: error.message };
 
   return { error: null, ok: true };
 }
 
 /**
- * Verify the OTP code the user received by email. If successful, the user is
- * authenticated. Optionally set a display username for new users.
+ * SIGNUP STEP 2 — verify the OTP code, create the account, and set the password.
  */
-export async function otpVerify(_prev: AuthState, formData: FormData): Promise<AuthState> {
+export async function signupVerifyOtp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const supabase = await createClient();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const token = String(formData.get("token") || "").trim();
   const username = String(formData.get("username") || "").trim();
+  const password = String(formData.get("password") || "");
 
   if (!email || !token) return { error: "Email and code are required" };
+  if (password.length < 6) {
+    return { error: "Password must be at least 6 characters" };
+  }
 
+  // Verifying an email OTP with a new email creates + authenticates the user.
   const { data, error } = await supabase.auth.verifyOtp({
     email,
     token,
@@ -53,15 +81,17 @@ export async function otpVerify(_prev: AuthState, formData: FormData): Promise<A
   const user = data.user;
   if (!user) return { error: "Verification failed. Please try again." };
 
-  // If the user supplied a username (registration), apply it to their profile.
-  if (username) {
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ username })
-      .eq("id", user.id);
-    if (profileError) {
-      return { error: "That username is already taken. Try another." };
-    }
+  // Set the password so the user can log in with it afterwards.
+  const { error: pwError } = await supabase.auth.updateUser({ password });
+  if (pwError) return { error: pwError.message };
+
+  // Apply the chosen username to the profile (created by the signup trigger).
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ username })
+    .eq("id", user.id);
+  if (profileError) {
+    return { error: "That username is already taken. Try another." };
   }
 
   revalidatePath("/", "layout");

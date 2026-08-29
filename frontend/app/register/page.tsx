@@ -4,15 +4,14 @@ import Link from "next/link";
 import { useState } from "react";
 import { MessageCircle, Sparkles } from "lucide-react";
 
-import { otpRequest, otpVerify } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
+import { signupSendOtp, signupVerifyOtp } from "@/app/auth/actions";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RegisterPage() {
   const [step, setStep] = useState<"form" | "code">("form");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [reqError, setReqError] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -21,7 +20,7 @@ export default function RegisterPage() {
   const sendCode = async (fd: FormData) => {
     setSending(true);
     setReqError(null);
-    const state = await otpRequest({ error: null }, fd);
+    const state = await signupSendOtp({ error: null }, fd);
     setSending(false);
     if (state.error) {
       setReqError(state.error);
@@ -29,41 +28,43 @@ export default function RegisterPage() {
     }
     setEmail(String(fd.get("email") || ""));
     setUsername(String(fd.get("username") || ""));
+    setPassword(String(fd.get("password") || ""));
     setStep("code");
   };
 
   const verify = async (fd: FormData) => {
     setVerifying(true);
     setVerifyError(null);
-    const state = await otpVerify({ error: null }, fd);
+    const state = await signupVerifyOtp({ error: null }, fd);
     if (state.error) {
       setVerifying(false);
       setVerifyError(state.error);
       return;
     }
-    // On success otpVerify redirect()s; this line is not reached.
+    // On success signupVerifyOtp redirect()s; this line is not reached.
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-muted/40 px-4 py-10">
-      <div className="w-full max-w-sm">
+    <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="relative z-10 w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <MessageCircle className="h-6 w-6" />
-          </div>
-          <h1 className="text-2xl font-bold">Create your EmoChat account</h1>
+          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-sm">
+            <MessageCircle className="h-7 w-7" />
+          </span>
+          <h1 className="text-2xl font-bold text-foreground">Create your EmoChat account</h1>
           <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" /> No password needed — just a code to your inbox.
+            <Sparkles className="h-3.5 w-3.5" /> Verify your email with a code, then sign in with a
+            password.
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+          <div className="mb-4 text-center">
+            <h2 className="text-lg font-bold text-foreground">
               {step === "form" ? "Sign up" : "Enter your code"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </h2>
+          </div>
+          <div>
             {step === "form" ? (
               <form action={sendCode} className="space-y-4">
                 {reqError && (
@@ -72,23 +73,41 @@ export default function RegisterPage() {
                   </p>
                 )}
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-sm font-medium">
+                  <label htmlFor="email" className="text-sm font-medium text-foreground">
                     Email
                   </label>
-                  <Input id="email" name="email" type="email" required autoComplete="email" />
+                  <Input id="email" name="email" type="email" required autoComplete="email" className="border-border bg-muted" />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="username" className="text-sm font-medium">
+                  <label htmlFor="username" className="text-sm font-medium text-foreground">
                     Username
                   </label>
-                  <Input id="username" name="username" required autoComplete="username" />
+                  <Input id="username" name="username" required autoComplete="username" className="border-border bg-muted" />
                   <p className="text-xs text-muted-foreground">
                     3-24 chars, letters/numbers/underscore. How others find you.
                   </p>
                 </div>
-                <Button type="submit" className="w-full" disabled={sending}>
-                  {sending ? "Sending code..." : "Send me a code"}
-                </Button>
+                <div className="space-y-2">
+                  <label htmlFor="password" className="text-sm font-medium text-foreground">
+                    Password
+                  </label>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    minLength={6}
+                    required
+                    autoComplete="new-password"
+                    className="border-border bg-muted"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={sending}
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {sending ? "Sending code…" : "Send me a code"}
+                </button>
               </form>
             ) : (
               <form action={verify} className="space-y-4">
@@ -97,14 +116,15 @@ export default function RegisterPage() {
                     {verifyError}
                   </p>
                 )}
-                <p className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-600 dark:text-green-400">
+                <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                   Code sent to <span className="font-medium">{email}</span>. Enter the 6-digit code
-                  below.
+                  below to finish signing up.
                 </p>
                 <input type="hidden" name="email" value={email} />
                 <input type="hidden" name="username" value={username} />
+                <input type="hidden" name="password" value={password} />
                 <div className="space-y-2">
-                  <label htmlFor="token" className="text-sm font-medium">
+                  <label htmlFor="token" className="text-sm font-medium text-foreground">
                     Verification code
                   </label>
                   <Input
@@ -114,25 +134,33 @@ export default function RegisterPage() {
                     autoComplete="one-time-code"
                     placeholder="000000"
                     required
-                    className="text-center text-lg tracking-widest"
+                    className="border-border bg-muted text-center text-lg tracking-widest"
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={verifying}>
-                  {verifying ? "Verifying..." : "Verify & continue"}
-                </Button>
-                <Button type="button" variant="ghost" className="w-full" onClick={() => setStep("form")}>
+                <button
+                  type="submit"
+                  disabled={verifying}
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {verifying ? "Verifying…" : "Verify & create account"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStep("form")}
+                  className="flex h-11 w-full items-center justify-center rounded-xl border border-border bg-white text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                >
                   Change email
-                </Button>
+                </button>
               </form>
             )}
             <p className="mt-4 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link href="/login" className="text-primary hover:underline">
+              <Link href="/login" className="font-medium text-primary hover:underline">
                 Sign in
               </Link>
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </main>
   );

@@ -1,24 +1,13 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import {
-  MessageCircle,
-  Settings,
-  User,
-  BarChart3,
-  FlaskConical,
-  LogOut,
-  Sun,
-  Moon,
-} from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AnimatePresence } from "framer-motion";
 
-import { logout } from "@/app/auth/actions";
-import { Button } from "@/components/ui/button";
-import { Avatar, initialsOf } from "@/components/ui/avatar";
-import { useTheme } from "@/lib/theme";
-import { cn } from "@/lib/utils";
+import { EmotionBackground } from "@/components/emotion/EmotionBackground";
+import { LiquidTopNav, type LiquidTopNavUser } from "@/components/layout/LiquidTopNav";
+import { ModelDebugDrawer } from "@/components/layout/ModelDebugDrawer";
+import { createClient } from "@/lib/supabaseClient";
+import type { EmotionLabel } from "@/lib/emotions";
 
 export interface AppShellUser {
   id: string;
@@ -27,100 +16,92 @@ export interface AppShellUser {
   email?: string | null;
 }
 
-export function AppShell({
-  user,
-  children,
-}: {
-  user: AppShellUser;
-  children: ReactNode;
-}) {
-  const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
+export function AppShell({ user, children }: { user: AppShellUser; children: ReactNode }) {
+  const supabase = useMemo(() => createClient(), []);
+  const [debugOpen, setDebugOpen] = useState(false);
+  const [liveState, setLiveState] = useState<{
+    emotion: EmotionLabel;
+    confidence: number;
+  } | null>(null);
 
-  const links = [
-    { href: "/dashboard", label: "Chats", icon: MessageCircle },
-    { href: "/analytics", label: "Dashboard", icon: BarChart3 },
-    { href: `/profile/${user.id}`, label: "Profile", icon: User },
-    { href: "/dev/model-eval", label: "Model Eval", icon: FlaskConical },
-    { href: "/settings", label: "Settings", icon: Settings },
-  ];
+  // Derive the "live" HMM state from the user's most recent decoded emotion.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("emotion_predictions")
+        .select("predicted_emotion, happy_probability, sad_probability, angry_probability, fear_probability, surprise_probability, neutral_probability")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (cancelled || !data || data.length === 0) return;
+      const row = data[0];
+      const probs = [
+        row.happy_probability,
+        row.sad_probability,
+        row.angry_probability,
+        row.fear_probability,
+        row.surprise_probability,
+        row.neutral_probability,
+      ];
+      const confidence = Math.max(...probs);
+      setLiveState({ emotion: row.predicted_emotion as EmotionLabel, confidence });
+    })();
+
+    // Realtime update whenever a new emotion prediction is stored.
+    const channel = supabase
+      .channel(`shell-emotion:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "emotion_predictions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const probs = [
+            Number(row.happy_probability ?? 0),
+            Number(row.sad_probability ?? 0),
+            Number(row.angry_probability ?? 0),
+            Number(row.fear_probability ?? 0),
+            Number(row.surprise_probability ?? 0),
+            Number(row.neutral_probability ?? 0),
+          ];
+          const confidence = Math.max(...probs, 0) || 0;
+          setLiveState({
+            emotion: (row.predicted_emotion as EmotionLabel) ?? "neutral",
+            confidence,
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user.id]);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageCircle className="h-4 w-4" />
-            </span>
-            <span className="hidden sm:inline">EmoChat</span>
-          </Link>
+    <div className="relative flex min-h-screen flex-col">
+      <EmotionBackground emotion={liveState?.emotion ?? null} />
+      <LiquidTopNav
+        user={user}
+        liveState={liveState}
+        onToggleDebug={() => setDebugOpen((o) => !o)}
+        debugOpen={debugOpen}
+      />
+      <main className="relative z-10 flex-1 px-3 pb-8 pt-4 md:px-4">
+        {children}
+      </main>
 
-          <nav className="flex items-center gap-1">
-            {links.map((l) => {
-              const active =
-                l.href === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : pathname.startsWith(l.href);
-              return (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <l.icon className="h-4 w-4" />
-                  <span className="hidden md:inline">{l.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <ThemeToggle resolvedTheme={resolvedTheme} setTheme={setTheme} />
-            <Link href={`/profile/${user.id}`}>
-              <Avatar src={user.avatar_url} size="sm">
-                {initialsOf(user.username)}
-              </Avatar>
-            </Link>
-            <form action={logout}>
-              <Button variant="ghost" size="icon" type="submit" aria-label="Log out">
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="flex-1">{children}</main>
+      <AnimatePresence>
+        {debugOpen && (
+          <ModelDebugDrawer open={debugOpen} onClose={() => setDebugOpen(false)} />
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
-
-function ThemeToggle({
-  resolvedTheme,
-  setTheme,
-}: {
-  resolvedTheme: "light" | "dark";
-  setTheme: (t: "light" | "dark" | "system") => void;
-}) {
-  const next: "light" | "dark" | "system" =
-    resolvedTheme === "dark" ? "light" : "dark";
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      aria-label="Toggle theme"
-      onClick={() => setTheme(next)}
-    >
-      {resolvedTheme === "dark" ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
-    </Button>
   );
 }
