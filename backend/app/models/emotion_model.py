@@ -22,6 +22,7 @@ import numpy as np
 from app.data.emotion_dataset import EMOTIONS, load_dataset
 from app.models.hmm import HMM
 from app.models.ngram import NGramEnsemble
+from app.models.ngram_predictor import NGramPredictor
 from app.preprocessing.myanmar_preprocessor import MyanmarPreprocessor
 
 logger = logging.getLogger("emochat")
@@ -49,6 +50,7 @@ class EmotionModel:
         docs_by_emotion: dict[str, list[list[str]]] = {e: [] for e in self.emotion_labels}
         sequences: list[list[str]] = []
         counts: dict[str, int] = {e: 0 for e in self.emotion_labels}
+        all_docs: list[list[str]] = []
 
         for entry in dataset:
             emotion = entry.get("emotion")
@@ -58,6 +60,7 @@ class EmotionModel:
             toks = self.preprocessor.preprocess(text)["tokens"]
             if toks:
                 docs_by_emotion[emotion].append(toks)
+                all_docs.append(toks)
                 counts[emotion] += 1
                 sequences.append([emotion])
 
@@ -77,6 +80,10 @@ class EmotionModel:
 
         self.hmm = HMM(self.emotion_labels)
         self.hmm.fit(sequences, emission_counts=counts)
+
+        # Train the generic next-word predictor over the full corpus.
+        self.predictor = NGramPredictor(n=3)
+        self.predictor.fit(all_docs)
 
         self.dataset_size = len(dataset)
         self.emotion_distribution = counts
@@ -156,6 +163,57 @@ class EmotionModel:
         from app.services.emotion_service import evaluate_model
 
         return evaluate_model(self)
+
+    # --------------------------------------------------------- autocomplete
+    def complete(self, text: str, top_k: int = 4) -> dict:
+        """Next-word suggestions from the generic N-Gram language model."""
+        pre = self.preprocessor.preprocess(text)
+        tokens = pre["tokens"]
+        suggestions = self.predictor.suggest(tokens, top_k=top_k)
+        return {
+            "text": text,
+            "prefix": tokens,
+            "suggestions": suggestions,
+        }
+
+    # -------------------------------------------------------------- metrics
+    def metrics(self) -> dict:
+        """Model internals for the debug/metrics drawer."""
+        import numpy as np
+
+        t_log = self.hmm.transition_log
+        transition_matrix = None
+        if t_log is not None:
+            t = np.exp(np.asarray(t_log))
+            transition_matrix = [
+                {self.emotion_labels[j]: round(float(t[i, j]), 4)
+                 for j in range(len(self.emotion_labels))}
+                for i in range(len(self.emotion_labels))
+            ]
+
+        initial = None
+        init_log = self.hmm.initial_log
+        if init_log is not None:
+            init = np.exp(np.asarray(init_log))
+            initial = {self.emotion_labels[i]: round(float(init[i]), 4)
+                       for i in range(len(self.emotion_labels))}
+
+        return {
+            "model": self.model_name,
+            "model_version": self.model_version,
+            "dataset_size": self.dataset_size,
+            "vocab_size": self.predictor.vocab_size,
+            "emotion_distribution": self.emotion_distribution,
+            "hmm": {
+                "states": self.emotion_labels,
+                "transition_matrix": transition_matrix,
+                "initial": initial,
+            },
+            "ngram": {
+                "bigram_samples": self.predictor.transition_samples(order=2, limit=10),
+                "trigram_samples": self.predictor.transition_samples(order=3, limit=10),
+            },
+        }
 
 
 def _softmax_log_scores(scores: list[float]) -> np.ndarray:

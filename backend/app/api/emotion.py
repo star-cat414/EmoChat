@@ -39,3 +39,23 @@ def evaluate(request: Request):
     """Developer/admin-only model evaluation (metrics + confusion matrix)."""
     model = request.app.state.emotion_model
     return model.evaluate()
+
+
+class CompleteRequest(BaseModel):
+    text: str
+    top_k: int = 4
+
+
+@router.post("/ngram/complete")
+def complete(req: CompleteRequest, request: Request):
+    """N-Gram next-word / phrase completion suggestions."""
+    model = request.app.state.emotion_model
+    top_k = max(1, min(8, req.top_k))
+    return model.complete(req.text, top_k=top_k)
+
+
+@router.get("/model/metrics")
+def metrics(request: Request):
+    """Model internals: HMM transition matrix + N-Gram transition samples."""
+    model = request.app.state.emotion_model
+    return model.metrics()
