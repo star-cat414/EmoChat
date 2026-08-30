@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useSearchParams } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useActionState } from "react";
 import { MessageCircle, Sparkles } from "lucide-react";
 
 import { login, type AuthState } from "@/app/auth/actions";
@@ -10,7 +11,7 @@ import { EmotionBackground } from "@/components/emotion/EmotionBackground";
 
 const emptyState: AuthState = { error: null };
 
-export default function LoginPage() {
+function LoginForm() {
   const [state, action, pending] = useActionState<AuthState, FormData>(login, emptyState);
   const searchParams = useSearchParams();
   const accountDeleted = searchParams.get("account") === "deleted";
@@ -82,5 +83,13 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
