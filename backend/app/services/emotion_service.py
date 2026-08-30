@@ -143,11 +143,13 @@ def _confusion_matrix(y_true: list[str], y_pred: list[str], labels: list[str]) -
     return cm
 
 
-def _per_language_metrics(model: EmotionModel) -> dict:
-    """Simple accuracy per language on the dataset (using combined pipeline)."""
-    labels = model.emotion_labels
-    rng = np.random.default_rng(7)
-    results: dict[str, dict] = {}
+def _per_language_metrics(model: EmotionModel) -> list[dict]:
+    """Simple accuracy per language on the dataset (using combined pipeline).
+
+    Returns a list of {"language", "correct", "total", "accuracy"} entries to match
+    the contract expected by the frontend model-evaluation tab.
+    """
+    results: list[dict] = []
     for language in ("myanmar", "english"):
         rows = [d for d in model.dataset if d.get("language") == language]
         correct = 0
@@ -157,8 +159,12 @@ def _per_language_metrics(model: EmotionModel) -> dict:
             if pred["emotion"] == entry.get("emotion"):
                 correct += 1
             total += 1
-        results[language] = {
-            "accuracy": round(correct / total, 4) if total else 0,
-            "n_samples": total,
-        }
+        results.append(
+            {
+                "language": language,
+                "correct": correct,
+                "total": total,
+                "accuracy": round(correct / total, 4) if total else 0,
+            }
+        )
     return results

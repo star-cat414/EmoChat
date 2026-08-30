@@ -19,7 +19,7 @@ import logging
 
 import numpy as np
 
-from app.data.emotion_dataset import EMOTIONS, load_dataset
+from app.data.emotion_dataset import EMOTIONS, get_datasource_summary, load_dataset
 from app.models.hmm import HMM
 from app.models.ngram import NGramEnsemble
 from app.models.ngram_predictor import NGramPredictor
@@ -202,6 +202,7 @@ class EmotionModel:
             "model": self.model_name,
             "model_version": self.model_version,
             "dataset_size": self.dataset_size,
+            "dataset": get_datasource_summary(),
             "vocab_size": self.predictor.vocab_size,
             "emotion_distribution": self.emotion_distribution,
             "hmm": {

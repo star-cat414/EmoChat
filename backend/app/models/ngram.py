@@ -38,6 +38,9 @@ class NGramModel:
         self.context_counts: dict[tuple[str, ...], int] = defaultdict(int)
         self.vocabulary: set[str] = set()
         self.total_ngrams = 0
+        # Share the pooled vocabulary size for Laplace smoothing so that classes
+        # trained on less data are not inflated by their (small) private vocabularies.
+        self.smoothing_vocab: int | None = None
 
     def fit(self, documents: list[list[str]]) -> None:
         """Fit on a list of tokenized documents."""
@@ -60,21 +63,24 @@ class NGramModel:
     def vocab_size(self) -> int:
         return len(self.vocabulary)
 
+    def _laplace_v(self) -> int:
+        return self.smoothing_vocab or self.vocab_size
+
     def unigram_prob(self, word: str) -> float:
         """P(word) with Laplace smoothing."""
-        return (self.counts.get((word,), 0) + 1) / (self.total_ngrams + self.vocab_size)
+        return (self.counts.get((word,), 0) + 1) / (self.total_ngrams + self._laplace_v())
 
     def bigram_prob(self, prev: str, word: str) -> float:
         """P(word | prev) with Laplace smoothing."""
         count = self.counts.get((prev, word), 0)
         context = self.context_counts.get((prev,), 0)
-        return (count + 1) / (context + self.vocab_size)
+        return (count + 1) / (context + self._laplace_v())
 
     def trigram_prob(self, prev2: str, prev: str, word: str) -> float:
         """P(word | prev2, prev) with Laplace smoothing."""
         count = self.counts.get((prev2, prev, word), 0)
         context = self.context_counts.get((prev2, prev), 0)
-        return (count + 1) / (context + self.vocab_size)
+        return (count + 1) / (context + self._laplace_v())
 
     def score(self, tokens: list[str], use_interpolation: bool = True) -> float:
         """Log-likelihood of token sequence under this model.
@@ -162,6 +168,16 @@ class NGramEnsemble:
                 continue
             for n in self.n_orders:
                 self.models[emotion][n].fit(docs)
+
+        # Share one pooled vocabulary size across every class/n order so that
+        # add-one smoothing penalizes unseen tokens equally across classes.
+        pooled: set[str] = set()
+        for by_n in self.models.values():
+            for model in by_n.values():
+                pooled |= model.vocabulary
+        for by_n in self.models.values():
+            for model in by_n.values():
+                model.smoothing_vocab = len(pooled)
 
     def score(self, emotion: str, tokens: list[str]) -> float:
         """Aggregate log-likelihood across n-orders for an emotion class."""

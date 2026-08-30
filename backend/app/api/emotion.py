@@ -34,7 +34,7 @@ def predict(req: PredictRequest, request: Request):
     return result
 
 
-@router.post("/model/evaluate")
+@router.get("/model/evaluate")
 def evaluate(request: Request):
     """Developer/admin-only model evaluation (metrics + confusion matrix)."""
     model = request.app.state.emotion_model
