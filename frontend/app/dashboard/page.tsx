@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { ChatList } from "@/components/chat/ChatList";
 import { getCurrentUser } from "@/lib/data";
 import { listConversations } from "@/lib/conversations";
@@ -16,16 +17,10 @@ export default async function DashboardPage() {
   return (
     <AppShell user={user}>
       <div className="mx-auto max-w-6xl px-4 py-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              <span className="text-gradient-brand">Your chats</span>
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Realtime conversations with HMM emotion decoding
-            </p>
-          </div>
-        </div>
+        <PageHeader
+          title="Your chats"
+          subtitle="Realtime conversations with HMM emotion decoding"
+        />
         <ChatList
           currentUserId={user.id}
           conversations={conversations}

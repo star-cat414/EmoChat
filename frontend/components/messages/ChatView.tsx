@@ -359,7 +359,7 @@ export function ChatView({
               onClick={sendMessage}
               disabled={sending || !text.trim()}
               aria-label="Send"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-colors hover:bg-indigo-700 disabled:opacity-40 disabled:hover:bg-primary"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-40 disabled:hover:bg-primary/90"
             >
               <Send className="h-4 w-4" />
             </button>

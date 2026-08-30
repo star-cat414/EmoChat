@@ -43,7 +43,7 @@ export function MessageBubble({
           className={cn(
             "relative rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed break-words",
             isOwn
-              ? "bg-gradient-brand text-white rounded-br-md shadow-sm"
+              ? "bg-primary text-white rounded-br-md shadow-sm"
               : "border border-border bg-accent text-foreground rounded-bl-md"
           )}
         >
@@ -151,7 +151,7 @@ function VoiceBubble({ message, isOwn }: { message: MessageBubbleData; isOwn: bo
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-colors",
             isOwn
               ? "bg-white/25 hover:bg-white/40"
-              : "bg-gradient-brand hover:opacity-90"
+              : "bg-primary hover:bg-primary/90"
           )}
           aria-label={playing ? "Pause" : "Play"}
         >

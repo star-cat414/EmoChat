@@ -32,7 +32,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <AppShell user={user}>
-      <div className="mx-auto max-w-2xl px-4 py-8">
+      <div className="mx-auto max-w-2xl px-4 py-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col items-center text-center">

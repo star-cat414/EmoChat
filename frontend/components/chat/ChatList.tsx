@@ -54,7 +54,7 @@ export function ChatList({
         </div>
         <button
           onClick={() => setShowSearch(true)}
-          className="flex items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
+          className="flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90"
         >
           <Plus className="h-4 w-4" /> New Chat
         </button>
@@ -105,7 +105,7 @@ export function ChatList({
                   </div>
                 </div>
                 {c.unread > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white">
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-white shadow-sm">
                     {c.unread}
                   </span>
                 )}

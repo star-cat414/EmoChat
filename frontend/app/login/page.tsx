@@ -60,7 +60,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={pending}
-                className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
+                className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {pending ? "Signing in…" : "Sign in"}
               </button>

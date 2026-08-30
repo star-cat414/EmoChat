@@ -106,7 +106,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={sending}
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {sending ? "Sending code…" : "Send me a code"}
                 </button>
@@ -142,7 +142,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={verifying}
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {verifying ? "Verifying…" : "Verify & create account"}
                 </button>

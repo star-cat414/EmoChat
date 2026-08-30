@@ -10,6 +10,7 @@ import {
 } from "@/components/analytics/EmotionDistributionChart";
 import { EmotionTrendChart } from "@/components/analytics/EmotionTrendChart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { useEmotionAnalytics } from "@/lib/analytics";
 import { EMOTION_META } from "@/lib/emotions";
 
@@ -49,7 +50,10 @@ export function MyEmotionDashboard({ currentUserId }: { currentUserId: string })
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="mb-6 text-2xl font-bold">My Emotion Dashboard</h1>
+      <PageHeader
+        title="My Emotion Dashboard"
+        subtitle="Your mood across all analyzed conversations"
+      />
 
       {loading ? (
         <p className="py-10 text-center text-sm text-muted-foreground">Loading analytics...</p>

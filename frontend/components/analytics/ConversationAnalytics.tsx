@@ -48,7 +48,7 @@ export function ConversationAnalytics({
         </Link>
         <Avatar src={other.avatar_url}>{initialsOf(other.username)}</Avatar>
         <div>
-          <h1 className="text-lg font-semibold">{other.username}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{other.username}</h1>
           <p className="text-sm text-muted-foreground">Conversation Analytics</p>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { fetchModelEvaluation, type ModelEvaluation } from "@/lib/api";
 import { EMOTION_META } from "@/lib/emotions";
 
@@ -53,19 +54,16 @@ export function ModelEvaluationView() {
   const maxConfusion = Math.max(...data.confusion_matrix.matrix.flat());
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">N-Gram + HMM evaluation</h2>
-          <p className="text-sm text-muted-foreground">
-            Curated dataset of {data.dataset_size} Myanmar + English samples (
-            {data.split.train} train / {data.split.test} test)
-          </p>
-        </div>
-        <Button variant="outline" onClick={load}>
-          <RefreshCw className="mr-1 h-4 w-4" /> Re-run
-        </Button>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6">
+      <PageHeader
+        title="Model Evaluation"
+        subtitle={`Curated dataset of ${data.dataset_size} Myanmar + English samples (${data.split.train} train / ${data.split.test} test)`}
+        action={
+          <Button variant="outline" onClick={load}>
+            <RefreshCw className="mr-1 h-4 w-4" /> Re-run
+          </Button>
+        }
+      />
 
       {/* Distribution */}
       <Card>
