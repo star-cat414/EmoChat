@@ -51,7 +51,7 @@ export function ModelDebugDrawer({
         initial={{ x: "100%" }}
         animate={{ x: open ? 0 : "100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
-        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col rounded-l-2xl border-l border-border bg-white shadow-xl"
+        className="fixed right-0 top-0 z-50 flex h-full w-full max-w-sm flex-col rounded-l-2xl border-l border-border bg-card shadow-xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4">

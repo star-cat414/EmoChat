@@ -6,6 +6,7 @@ import { MessageCircle, Sparkles } from "lucide-react";
 
 import { signupSendOtp, signupVerifyOtp } from "@/app/auth/actions";
 import { Input } from "@/components/ui/input";
+import { EmotionBackground } from "@/components/emotion/EmotionBackground";
 
 export default function RegisterPage() {
   const [step, setStep] = useState<"form" | "code">("form");
@@ -46,9 +47,10 @@ export default function RegisterPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <EmotionBackground />
       <div className="relative z-10 w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-sm">
+          <span className="brand-glow mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white">
             <MessageCircle className="h-7 w-7" />
           </span>
           <h1 className="text-2xl font-bold text-foreground">Create your EmoChat account</h1>
@@ -58,7 +60,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="mb-4 text-center">
             <h2 className="text-lg font-bold text-foreground">
               {step === "form" ? "Sign up" : "Enter your code"}
@@ -104,7 +106,7 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={sending}
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
                 >
                   {sending ? "Sending code…" : "Send me a code"}
                 </button>
@@ -140,14 +142,14 @@ export default function RegisterPage() {
                 <button
                   type="submit"
                   disabled={verifying}
-                  className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                  className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
                 >
                   {verifying ? "Verifying…" : "Verify & create account"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep("form")}
-                  className="flex h-11 w-full items-center justify-center rounded-xl border border-border bg-white text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  className="flex h-11 w-full items-center justify-center rounded-xl border border-border bg-card text-sm font-medium text-foreground transition-colors hover:bg-muted"
                 >
                   Change email
                 </button>

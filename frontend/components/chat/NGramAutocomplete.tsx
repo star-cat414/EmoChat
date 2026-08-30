@@ -71,7 +71,7 @@ export function NGramAutocomplete({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 6 }}
-      className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-white px-2.5 py-2 shadow-sm"
+      className="mb-2 flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-2 shadow-sm"
     >
       <span className="flex items-center gap-1 pr-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
         <Sparkles className="h-3 w-3" /> N-Gram

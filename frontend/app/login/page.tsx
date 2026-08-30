@@ -6,6 +6,7 @@ import { MessageCircle, Sparkles } from "lucide-react";
 
 import { login, type AuthState } from "@/app/auth/actions";
 import { Input } from "@/components/ui/input";
+import { EmotionBackground } from "@/components/emotion/EmotionBackground";
 
 const emptyState: AuthState = { error: null };
 
@@ -14,9 +15,10 @@ export default function LoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4">
+      <EmotionBackground />
       <div className="relative z-10 w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center text-center">
-          <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-white shadow-sm">
+          <span className="brand-glow mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white">
             <MessageCircle className="h-7 w-7" />
           </span>
           <h1 className="text-2xl font-bold text-foreground">Welcome back to EmoChat</h1>
@@ -25,7 +27,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
           <div className="mb-4 text-center">
             <h2 className="text-lg font-bold text-foreground">Sign in with password</h2>
           </div>
@@ -58,7 +60,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={pending}
-                className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                className="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-brand text-sm font-semibold text-white shadow-sm transition-all hover:opacity-90 disabled:opacity-50"
               >
                 {pending ? "Signing in…" : "Sign in"}
               </button>

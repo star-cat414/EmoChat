@@ -19,7 +19,7 @@ export default async function DashboardPage() {
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              <span className="text-glow">Your chats</span>
+              <span className="text-gradient-brand">Your chats</span>
             </h1>
             <p className="text-sm text-muted-foreground">
               Realtime conversations with HMM emotion decoding

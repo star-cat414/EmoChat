@@ -235,7 +235,7 @@ export function ChatView({
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-14rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm md:h-[calc(100vh-10rem)]">
+    <div className="mx-auto flex h-[calc(100vh-14rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:h-[calc(100vh-10rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")} className="md:hidden" aria-label="Back">

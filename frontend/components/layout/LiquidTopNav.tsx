@@ -9,15 +9,12 @@ import {
   MessageCircle,
   LogOut,
   Settings,
-  Sun,
-  Moon,
   Activity,
   Fingerprint,
 } from "lucide-react";
 
 import { logout } from "@/app/auth/actions";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
-import { useTheme } from "@/lib/theme";
 import { EMOTION_META, type EmotionLabel } from "@/lib/emotions";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +42,6 @@ export function LiquidTopNav({
   debugOpen: boolean;
 }) {
   const pathname = usePathname();
-  const { resolvedTheme, setTheme } = useTheme();
 
   const links = [
     { href: "/dashboard", label: "Chats", icon: MessageCircle },
@@ -57,11 +53,11 @@ export function LiquidTopNav({
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4">
         {/* Brand */}
         <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
+          <span className="brand-glow flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand text-white">
             <MessageCircle className="h-5 w-5" />
           </span>
           <span className="flex flex-col leading-none">
@@ -80,12 +76,12 @@ export function LiquidTopNav({
               <Link
                 key={l.href}
                 href={l.href}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  active
-                    ? "bg-accent text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
+className={cn(
+              "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+              active
+                ? "bg-gradient-brand text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
               >
                 <l.icon className="h-4 w-4" />
                 <span>{l.label}</span>
@@ -142,15 +138,6 @@ export function LiquidTopNav({
             <Activity className="h-4 w-4" />
           </button>
 
-          {/* Theme toggle */}
-          <button
-            onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-            aria-label="Toggle theme"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            {resolvedTheme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
-
           {/* Avatar */}
           <Link href={`/profile/${user.id}`} className="ml-1">
             <Avatar src={user.avatar_url} size="sm">
@@ -181,7 +168,7 @@ export function LiquidTopNav({
       </div>
 
       {/* Mobile bottom nav */}
-      <div className="flex items-center gap-1 border-t border-border bg-white px-2 py-1.5 md:hidden">
+      <div className="flex items-center gap-1 border-t border-border bg-card px-2 py-1.5 md:hidden">
         {links.map((l) => (
           <Link
             key={l.href}
@@ -189,7 +176,7 @@ export function LiquidTopNav({
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-medium transition-colors",
               navActive(l.href)
-                ? "bg-accent text-primary"
+                ? "bg-gradient-brand text-white shadow-sm"
                 : "text-muted-foreground hover:bg-muted"
             )}
           >

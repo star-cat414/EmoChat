@@ -43,8 +43,8 @@ export function MessageBubble({
           className={cn(
             "relative rounded-2xl px-3.5 py-2 text-[15px] leading-relaxed break-words",
             isOwn
-              ? "bg-primary text-white rounded-br-md"
-              : "border border-border bg-[#eef2ff] text-foreground rounded-bl-md"
+              ? "bg-gradient-brand text-white rounded-br-md shadow-sm"
+              : "border border-border bg-accent text-foreground rounded-bl-md"
           )}
         >
           {isVoice ? <VoiceBubble message={message} isOwn={isOwn} /> : message.content}
@@ -71,7 +71,7 @@ function EmotionMicroBadge({ prediction }: { prediction: Prediction }) {
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1.5 rounded-md border border-border bg-white px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
+        className="flex items-center gap-1.5 rounded-md border border-border bg-card px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
         aria-expanded={expanded}
       >
         <span>{meta.emoji}</span>
@@ -83,7 +83,7 @@ function EmotionMicroBadge({ prediction }: { prediction: Prediction }) {
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}
-          className="mt-1 w-56 space-y-1.5 overflow-hidden rounded-xl border border-border bg-white p-2.5 shadow-sm"
+          className="mt-1 w-56 space-y-1.5 overflow-hidden rounded-xl border border-border bg-card p-2.5 shadow-sm"
         >
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             HMM decode
@@ -151,7 +151,7 @@ function VoiceBubble({ message, isOwn }: { message: MessageBubbleData; isOwn: bo
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-colors",
             isOwn
               ? "bg-white/25 hover:bg-white/40"
-              : "bg-primary hover:bg-indigo-700"
+              : "bg-gradient-brand hover:opacity-90"
           )}
           aria-label={playing ? "Pause" : "Play"}
         >

@@ -20,18 +20,21 @@
   --success: #10b981;
   --success-foreground: #ffffff;
 
-  /* Fallback ambient (unused in light theme) */
-  --glow-1: #eef2ff;
-  --glow-2: #eef2ff;
-  --glow-3: #eef2ff;
+  /* Brand gradient + glow */
+  --gradient-brand: linear-gradient(135deg, #6366f1 0%, #8b5cf6 45%, #d946ef 100%);
+
+  /* Aurora background blobs */
+  --aurora-1: rgba(99, 102, 241, 0.32);
+  --aurora-2: rgba(168, 85, 247, 0.28);
+  --aurora-3: rgba(236, 72, 153, 0.2);
 
   /* Emotion colors (semantic only) */
   --emotion-happy: #f59e0b;
   --emotion-happy-bg: #fef3c7;
   --emotion-sad: #3b82f6;
   --emotion-sad-bg: #dbeafe;
-  --emotion-angry: #ef4444;
-  --emotion-angry-bg: #fee2e2;
+  --emotion-angry: #f43f5e;
+  --emotion-angry-bg: #ffe4e6;
   --emotion-fear: #8b5cf6;
   --emotion-fear-bg: #ede9fe;
   --emotion-surprise: #f97316;
@@ -56,6 +59,14 @@
   --destructive: #f87171;
   --success: #34d399;
   --success-foreground: #022c22;
+
+  /* Brand gradient + glow */
+  --gradient-brand: linear-gradient(135deg, #818cf8 0%, #a78bfa 45%, #e879f9 100%);
+
+  /* Aurora background blobs */
+  --aurora-1: rgba(99, 102, 241, 0.28);
+  --aurora-2: rgba(168, 85, 247, 0.24);
+  --aurora-3: rgba(217, 70, 239, 0.18);
 }
 
 @theme inline {
@@ -101,8 +112,48 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
-   Light, minimal surfaces. Class names retained so component code stays valid;
-   values are now clean white cards with subtle borders and soft shadows.
+   Brand gradients
+   --------------------------------------------------------------------------- */
+
+.bg-gradient-brand {
+  background-image: var(--gradient-brand);
+}
+
+.text-gradient-brand {
+  background-image: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.brand-glow {
+  box-shadow: 0 8px 24px -6px rgba(99, 102, 241, 0.45);
+}
+
+/* ---------------------------------------------------------------------------
+   Aurora utility classes
+   --------------------------------------------------------------------------- */
+
+.aurora-blob-1 {
+  animation: aurora-drift-1 22s ease-in-out infinite alternate;
+}
+
+.aurora-blob-2 {
+  animation: aurora-drift-2 26s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift-1 {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(64px, 40px) scale(1.12); }
+}
+
+@keyframes aurora-drift-2 {
+  from { transform: translate(0, 0) scale(1.06); }
+  to   { transform: translate(-56px, -32px) scale(0.94); }
+}
+
+/* ---------------------------------------------------------------------------
+   Neutral surfaces
    --------------------------------------------------------------------------- */
 
 /* `glass` -> neutral surface card */
@@ -151,11 +202,6 @@ body {
   100% { transform: scale(2.1); opacity: 0; }
 }
 
-/* Soft text shadow accent (light) */
-.text-glow {
-  text-shadow: none;
-}
-
 /* Thin scrollbars */
 .glass-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .glass-scroll::-webkit-scrollbar-thumb {
@@ -165,5 +211,7 @@ body {
 .glass-scroll::-webkit-scrollbar-track { background: transparent; }
 
 @media (prefers-reduced-motion: reduce) {
-  .pulse-dot::before { animation: none; }
+  .pulse-dot::before,
+  .aurora-blob-1,
+  .aurora-blob-2 { animation: none; }
 }

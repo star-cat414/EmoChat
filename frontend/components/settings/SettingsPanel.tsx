@@ -2,11 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { Bell, Globe, Lock, Moon, User } from "lucide-react";
+import { Bell, Globe, Lock, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 interface SettingsUser {
@@ -15,7 +14,6 @@ interface SettingsUser {
 }
 
 export function SettingsPanel({ user }: { user: SettingsUser }) {
-  const { theme, setTheme } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [emotionInsights, setEmotionInsights] = useState(true);
   const [privacy, setPrivacy] = useState(true);
@@ -30,29 +28,6 @@ export function SettingsPanel({ user }: { user: SettingsUser }) {
         <p className="text-sm text-muted-foreground">
           Username: <span className="font-medium text-foreground">{user.username}</span>
         </p>
-      </SettingsSection>
-
-      <SettingsSection
-        icon={<Moon className="h-4 w-4" />}
-        title="Appearance"
-        description="Choose how EmoChat looks"
-      >
-        <div className="grid grid-cols-3 gap-2">
-          {(["light", "dark", "system"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTheme(t)}
-              className={cn(
-                "rounded-lg border px-3 py-2 text-sm capitalize transition-colors",
-                theme === t
-                  ? "border-primary bg-accent text-accent-foreground"
-                  : "border-border hover:bg-muted"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
       </SettingsSection>
 
       <SettingsSection

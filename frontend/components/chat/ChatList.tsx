@@ -61,7 +61,7 @@ export function ChatList({
       </div>
 
       {/* Room rail */}
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-white">
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card">
         {filtered.length === 0 && (
           <div className="p-10 text-center text-sm text-muted-foreground">
             No conversations yet. Start a new chat.
