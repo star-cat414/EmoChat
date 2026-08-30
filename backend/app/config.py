@@ -14,7 +14,7 @@ def _env_list(key: str, default: str = "") -> list[str]:
 class Settings:
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    ALLOWED_ORIGIN: list[str] = _env_list("ALLOWED_ORIGIN", "http://localhost:3000")
+    ALLOWED_ORIGIN: list[str] = _env_list("ALLOWED_ORIGIN", "https://emochat-frontend.vercel.app")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     PORT: int = int(os.getenv("PORT", "8000"))
 

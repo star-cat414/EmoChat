@@ -48,6 +48,11 @@ app.include_router(analytics.router, prefix="/api", tags=["analytics"])
 app.include_router(calls.router, prefix="/api", tags=["calls"])
 
 
+@app.get("/", include_in_schema=False)
+def root():
+    return {"status": "ok", "service": "emochat-backend"}
+
+
 @app.get("/health", tags=["health"])
 def health():
     return {
