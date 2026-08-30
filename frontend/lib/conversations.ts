@@ -33,12 +33,26 @@ export async function listConversations(userId: string): Promise<ConversationSum
 
   const conversationIds = memberships.map((m) => m.conversation_id);
 
-  // Other members of each conversation.
+  // Other members of each conversation (plain ids — profiles are fetched below).
   const { data: members } = await supabase
     .from("conversation_members")
-    .select("conversation_id, user_id, profiles:user_id(username, avatar_url)")
+    .select("conversation_id, user_id")
     .in("conversation_id", conversationIds)
     .neq("user_id", userId);
+
+  // PostgREST cannot embed `profiles` from conversation_members (its FK points at
+  // auth.users), so fetch the partner profiles directly and map by id.
+  const otherIds = [...new Set((members ?? []).map((m) => m.user_id))];
+  const profileMap = new Map<string, { username: string | null; avatar_url: string | null }>();
+  if (otherIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in("id", otherIds);
+    for (const p of profiles ?? []) {
+      profileMap.set(p.id, { username: p.username, avatar_url: p.avatar_url });
+    }
+  }
 
   const { data: conversations } = await supabase
     .from("conversations")
@@ -52,11 +66,7 @@ export async function listConversations(userId: string): Promise<ConversationSum
     const otherMember = (members ?? []).find(
       (m) => m.conversation_id === conv.id
     );
-    const otherProfile = Array.isArray(otherMember?.profiles)
-      ? otherMember.profiles[0]
-      : (otherMember?.profiles as unknown as
-          | { username: string | null; avatar_url: string | null }
-          | undefined);
+    const otherProfile = profileMap.get(otherMember?.user_id ?? "");
 
     const { data: lastMsg } = await supabase
       .from("messages")

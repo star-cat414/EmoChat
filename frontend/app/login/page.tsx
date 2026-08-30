@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useSearchParams } from "react";
 import { MessageCircle, Sparkles } from "lucide-react";
 
 import { login, type AuthState } from "@/app/auth/actions";
@@ -12,6 +12,8 @@ const emptyState: AuthState = { error: null };
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState<AuthState, FormData>(login, emptyState);
+  const searchParams = useSearchParams();
+  const accountDeleted = searchParams.get("account") === "deleted";
 
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background px-4">
@@ -28,6 +30,11 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+          {accountDeleted && (
+            <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+              Your account was deleted. You can sign up again anytime.
+            </p>
+          )}
           <div className="mb-4 text-center">
             <h2 className="text-lg font-bold text-foreground">Sign in with password</h2>
           </div>

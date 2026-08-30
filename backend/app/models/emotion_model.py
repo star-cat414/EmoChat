@@ -48,6 +48,12 @@ class EmotionModel:
         """Train the N-Gram ensemble and the HMM from labeled examples."""
         # Group tokenized documents by emotion.
         docs_by_emotion: dict[str, list[list[str]]] = {e: [] for e in self.emotion_labels}
+        # Per-language n-gram corpora: Myanmar and English classes are trained
+        # separately and routed by the detected language at predict time, so big
+        # English volumes do not skew Myanmar predictions (and vice-versa).
+        lang_docs: dict[str, dict[str, list[list[str]]]] = {
+            lang: {e: [] for e in self.emotion_labels} for lang in ("myanmar", "english")
+        }
         sequences: list[list[str]] = []
         counts: dict[str, int] = {e: 0 for e in self.emotion_labels}
         all_docs: list[list[str]] = []
@@ -63,8 +69,20 @@ class EmotionModel:
                 all_docs.append(toks)
                 counts[emotion] += 1
                 sequences.append([emotion])
+                lang = entry.get("language")
+                if lang in lang_docs:
+                    lang_docs[lang][emotion].append(toks)
 
-        # Train N-Gram ensemble.
+        # Train per-language N-Gram ensembles (Myanmar chars never collide with
+        # English tokens, so each language gets an undistorted model).
+        self.ngrams: dict[str, NGramEnsemble] = {}
+        for lang, docs in lang_docs.items():
+            if any(docs.values()):
+                ens = NGramEnsemble(self.emotion_labels)
+                ens.fit(docs)
+                self.ngrams[lang] = ens
+
+        # Train a combined N-Gram ensemble as a fallback for mixed/unknown text.
         self.ngram = NGramEnsemble(self.emotion_labels)
         self.ngram.fit(docs_by_emotion)
 
@@ -119,7 +137,8 @@ class EmotionModel:
             return self._build_output("neutral", 1.0, probs, pre["language"])
 
         # 1) N-Gram scores per emotion (log-likelihood that text came from each class).
-        raw_scores = self.ngram.scores(tokens)
+        ensemble = self.ngrams.get(pre["language"]) or self.ngram
+        raw_scores = ensemble.scores(tokens)
 
         # 2) Convert to emission probabilities (softmax over emotion classes).
         emission = _softmax_log_scores(list(raw_scores.values()))

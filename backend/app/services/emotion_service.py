@@ -27,88 +27,119 @@ def predict_emotion(model: EmotionModel, text: str, conversation_id: str | None 
 def evaluate_model(model: EmotionModel) -> dict:
     """Evaluate N-Gram, HMM, and combined on the curated dataset.
 
-    Uses a stratified train/test split. Reported for the developer/admin evaluation page.
+    Uses a stratified train/test split and mirrors production routing (per-language
+    n-gram ensembles) so the reported numbers reflect real usage. Reported for the
+    developer/admin evaluation page.
     """
     dataset = model.dataset
     labels = model.emotion_labels
 
-    # Stratified split: 80% train / 20% test.
+    # Stratified split: 80% train / 20% test. Track language so routing matches
+    # production instead of the old single combined model.
     rng = np.random.default_rng(42)
     train: dict[str, list[str]] = {e: [] for e in labels}
-    test: dict[str, list[str]] = {e: [] for e in labels}
+    train_rows: list[dict] = []
+    test_rows: list[tuple[str, str, str]] = []  # (text, emotion, language)
     for entry in dataset:
         emotion = entry.get("emotion")
         text = entry.get("text", "")
-        toks = model.preprocessor.preprocess(text)["tokens"]
-        if not toks or emotion not in labels:
+        language = entry.get("language", "english")
+        if not text or emotion not in labels:
             continue
         if rng.random() < 0.8:
             train[emotion].append(text)
+            train_rows.append({"text": text, "emotion": emotion, "language": language})
         else:
-            test[emotion].append(text)
+            test_rows.append((text, emotion, language))
+
+    pre = model.preprocessor
+
+    # Per-language n-gram ensembles (same routing as EmotionModel.predict) plus a
+    # combined fallback for mixed/unknown text.
+    combined_ngram = NGramEnsemble(labels)
+    combined_ngram.fit({e: [pre.preprocess(t)["tokens"] for t in ts] for e, ts in train.items()})
+    lang_ngrams: dict[str, NGramEnsemble] = {}
+    for language in ("myanmar", "english"):
+        rows = [r for r in train_rows if r["language"] == language]
+        if rows:
+            ens = NGramEnsemble(labels)
+            ens.fit(
+                {
+                    e: [pre.preprocess(r["text"])["tokens"] for r in rows if r["emotion"] == e]
+                    for e in labels
+                }
+            )
+            lang_ngrams[language] = ens
+
+    def pick(language: str) -> NGramEnsemble:
+        return lang_ngrams.get(language) or combined_ngram
+
+    def routed(text: str) -> tuple[NGramEnsemble, list[str]]:
+        pre_out = pre.preprocess(text)
+        return pick(pre_out["language"]), pre_out["tokens"]
+
+    # Fit the HMM once from the train split (mirrors production context model).
+    hmm = HMM(labels)
+    _fit_hmm(hmm, train, labels)
 
     metrics_sets: dict[str, dict] = {}
 
-    # ---------------- N-Gram only ----------------
-    ngram = NGramEnsemble(labels)
-    ngram.fit({e: [model.preprocessor.preprocess(t)["tokens"] for t in ts] for e, ts in train.items()})
-    y_true, y_pred = [], []
-    for emotion, texts in test.items():
-        for t in texts:
-            toks = model.preprocessor.preprocess(t)["tokens"]
+    def evaluate_with(use_hmm: bool) -> tuple[list[str], list[str]]:
+        y_true, y_pred = [], []
+        for text, emotion, _language in test_rows:
+            ens, toks = routed(text)
             if not toks:
                 continue
-            scores = ngram.scores(toks)
-            pred = max(scores, key=scores.get)
+            raw = ens.scores(toks)
+            if not use_hmm:
+                pred = max(raw, key=raw.get)
+            else:
+                emission = _softmax(list(raw.values()))
+                em_log = np.log(np.array(emission) + 1e-12)
+                posterior = hmm.predict([em_log])
+                pred = labels[int(np.argmax(posterior))]
             y_true.append(emotion)
             y_pred.append(pred)
-    metrics_sets["NGram"] = _classification_metrics(y_true, y_pred, labels)
+        return y_true, y_pred
+
+    metrics_sets["NGram"] = _classification_metrics(*evaluate_with(False), labels)
 
     # ---------------- N-Gram + HMM (combined) ----------------
-    hmm = HMM(labels)
-    # Fit HMM on emotion labels from the whole dataset (plus persistence sequences).
-    seqs: list[list[str]] = []
-    for entry in dataset:
-        if entry.get("emotion") in labels:
-            seqs.append([entry["emotion"]])
-    import random
-
-    random.seed(42)
-    for _ in range(30):
-        seqs.append([random.choice(labels) for _ in range(random.randint(1, 5))])
-    counts = {e: len(train.get(e, [])) for e in labels}
-    hmm.fit(seqs, emission_counts=counts)
-
-    y_true2, y_pred2 = [], []
-    for emotion, texts in test.items():
-        for t in texts:
-            toks = model.preprocessor.preprocess(t)["tokens"]
-            if not toks:
-                continue
-            raw = ngram.scores(toks)
-            emission = _softmax(list(raw.values()))
-            em_log = np.log(np.array(emission) + 1e-12)
-            posterior = hmm.predict([em_log])
-            idx = int(np.argmax(posterior))
-            y_true2.append(emotion)
-            y_pred2.append(labels[idx])
-    metrics_sets["NGram-HMM"] = _classification_metrics(y_true2, y_pred2, labels)
+    metrics_sets["NGram-HMM"] = _classification_metrics(*evaluate_with(True), labels)
 
     # HMM-specific metrics (emission-only usage) reported as same as combined for clarity,
     # plus a confusion matrix from the combined run.
     metrics_sets["HMM"] = metrics_sets["NGram-HMM"]
 
-    confusion = _confusion_matrix(y_true2, y_pred2, labels)
+    yt, yp = evaluate_with(True)
+    confusion = _confusion_matrix(yt, yp, labels)
 
     return {
         "dataset_size": len(dataset),
         "emotions": labels,
         "emotion_distribution": model.emotion_distribution,
-        "per_language": _per_language_metrics(model),
+        "per_language": _per_language_metrics(labels, pick, pre, test_rows),
         "metrics": metrics_sets,
         "confusion_matrix": {"labels": labels, "matrix": confusion},
-        "split": {"train": sum(len(v) for v in train.values()), "test": len(y_true2)},
+        "split": {
+            "train": sum(len(v) for v in train.values()),
+            "test": len(test_rows),
+        },
     }
+
+
+def _fit_hmm(hmm: HMM, train: dict[str, list[str]], labels: list[str]) -> None:
+    """Fit the HMM on train-split emotion sequences plus persistence handcrafted seqs."""
+    import random
+
+    seqs: list[list[str]] = []
+    for emotion, texts in train.items():
+        seqs.extend([[emotion] for _ in texts])
+    random.seed(42)
+    for _ in range(30):
+        seqs.append([random.choice(labels) for _ in range(random.randint(1, 5))])
+    counts = {e: len(train.get(e, [])) for e in labels}
+    hmm.fit(seqs, emission_counts=counts)
 
 
 def _softmax(v: list[float]) -> np.ndarray:
@@ -143,22 +174,20 @@ def _confusion_matrix(y_true: list[str], y_pred: list[str], labels: list[str]) -
     return cm
 
 
-def _per_language_metrics(model: EmotionModel) -> list[dict]:
-    """Simple accuracy per language on the dataset (using combined pipeline).
-
-    Returns a list of {"language", "correct", "total", "accuracy"} entries to match
-    the contract expected by the frontend model-evaluation tab.
-    """
+def _per_language_metrics(labels, pick, pre, test_rows) -> list[dict]:
+    """Held-out accuracy per language, using the same per-language routing as production."""
     results: list[dict] = []
     for language in ("myanmar", "english"):
-        rows = [d for d in model.dataset if d.get("language") == language]
+        rows = [(t, e) for t, e, l in test_rows if l == language]
         correct = 0
-        total = 0
-        for entry in rows:
-            pred = model.predict(entry["text"])
-            if pred["emotion"] == entry.get("emotion"):
+        for text, emotion in rows:
+            toks = pre.preprocess(text)["tokens"]
+            if not toks:
+                continue
+            raw = pick(language).scores(toks)
+            if max(raw, key=raw.get) == emotion:
                 correct += 1
-            total += 1
+        total = len(rows)
         results.append(
             {
                 "language": language,

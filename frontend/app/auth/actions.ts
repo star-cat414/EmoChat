@@ -21,68 +21,151 @@ function isNetworkError(e: AuthErrorLike): boolean {
 
 const NETWORK_MSG =
   "Cannot reach the server. Check your internet connection and try again.";
-const RATE_LIMIT_MSG = "Too many attempts. Please wait a moment and try again.";
+const LOGIN_NETWORK_MSG =
+  "Cannot reach the server, or the email or password is incorrect. Check your connection and try again.";
+const RATE_LIMIT_MSG =
+  "Too many attempts on this account or from this device. Please wait a few minutes and try again.";
 const INVALID_EMAIL_MSG = "Please enter a valid email address.";
+
+const emailLooksValid = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 
 function describeAuthError(
   e: AuthErrorLike | null,
   scope: "login" | "otp" | "verify"
 ): string {
   if (!e) return "Something went wrong. Please try again.";
+
   if (isNetworkError(e)) {
-    return scope === "login"
-      ? "Incorrect email or password, or the server could not be reached. Check your connection and try again."
-      : NETWORK_MSG;
+    return scope === "login" ? LOGIN_NETWORK_MSG : NETWORK_MSG;
   }
 
   const code = e.code ?? "";
+  const status = e.status;
   const msg = (e.message ?? "").toLowerCase();
+  const has = (...pats: string[]) =>
+    pats.some((p) => p === code || msg.includes(p));
 
-  if (/\b(rate.?limit|over_request_rate_limit)\b/.test(code + " " + msg)) {
+  // Any scope: rate limited by Supabase (HTTP 429 or known codes/messages).
+  if (
+    status === 429 ||
+    has(
+      "rate limit",
+      "too many requests",
+      "over_email_send_rate_limit",
+      "over_request_rate_limit",
+      "email_send_rate_limit"
+    )
+  ) {
     return RATE_LIMIT_MSG;
   }
 
-  if (code === "invalid_email" || msg.includes("invalid email")) {
+  // Any scope: malformed email address.
+  if (has("invalid email", "invalid_email", "email_address_invalid")) {
     return INVALID_EMAIL_MSG;
   }
 
   switch (scope) {
     case "login":
-      if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
-        return "Incorrect email or password.";
+      if (
+        has(
+          "invalid login credentials",
+          "invalid_credentials",
+          "incorrect email or password",
+          "email or password is incorrect"
+        )
+      ) {
+        return "Incorrect email or password. Please check both and try again.";
       }
-      if (code === "email_not_confirmed" || msg.includes("not confirmed")) {
-        return "Please confirm your email before signing in.";
+      if (has("not confirmed", "email_not_confirmed", "unverified")) {
+        return "This email hasn't been verified yet. Check your inbox for the confirmation link.";
       }
-      if (code === "weak_password" || msg.includes("password")) {
+      if (has("banned", "user_banned", "suspended", "disabled account")) {
+        return "This account has been suspended. Please contact support.";
+      }
+      if (has("user not found", "user_not_found", "no user found")) {
+        return "No account exists with this email. Consider signing up first.";
+      }
+      if (
+        has(
+          "email is not allowed",
+          "email_not_allowed",
+          "domain not allowed"
+        )
+      ) {
+        return "This email address is not allowed to sign in. Try a different email.";
+      }
+      if (has("weak password", "weak_password", "password should be at least")) {
         return "Password must be at least 6 characters.";
       }
-      break;
-    case "otp":
-      if (code === "signup_disabled" || msg.includes("signups disabled") || msg.includes("signup.disabled")) {
-        return "New signups are currently disabled. Please try again later.";
+      if (has("captcha")) {
+        return "Human verification failed. Please try again.";
       }
-      if (msg.includes("already registered") || code === "user_already_exists") {
+      break;
+
+    case "otp":
+      if (
+        has(
+          "already registered",
+          "already been registered",
+          "user_already_exists",
+          "account already exists"
+        )
+      ) {
         return "An account with this email already exists. Try signing in instead.";
       }
+      if (
+        has(
+          "signups not allowed",
+          "signup disabled",
+          "signups disabled",
+          "signup_disabled",
+          "signup not allowed"
+        )
+      ) {
+        return "New signups are currently disabled. Please try again later.";
+      }
+      if (has("email is not allowed", "email_not_allowed", "domain not allowed")) {
+        return "This email address is not allowed to sign up. Try a different email.";
+      }
+      if (
+        has(
+          "database error saving new user",
+          "database error",
+          "db_error"
+        )
+      ) {
+        return "Could not create an account right now. Please try again shortly.";
+      }
       break;
+
     case "verify":
       if (
-        code === "otp_expired" ||
-        msg.includes("expired") ||
-        msg.includes("invalid token") ||
-        msg.includes("invalid otp") ||
-        msg.includes("otp code")
+        has(
+          "token has expired",
+          "otp expired",
+          "otp_expired",
+          "expired",
+          "invalid token",
+          "invalid otp",
+          "unable to validate",
+          "otp code",
+          "wrong otp"
+        )
       ) {
         return "The verification code is invalid or expired. Please request a new one.";
       }
-      if (code === "weak_password" || msg.includes("weak password") || msg.includes("password should be at least")) {
+      if (has("weak password", "weak_password", "password should be at least")) {
         return "Password must be at least 6 characters.";
+      }
+      if (has("already registered", "already been registered", "user_already_exists")) {
+        return "An account with this email already exists. Try signing in instead.";
       }
       break;
   }
 
-  return e.message ?? "Something went wrong. Please try again.";
+  // Unknown error: surface the exact message so nothing is hidden.
+  return e.message && e.message.trim() ? e.message : "Something went wrong. Please try again.";
 }
 
 /**
@@ -94,6 +177,7 @@ export async function login(_prev: AuthState, formData: FormData): Promise<AuthS
   const password = String(formData.get("password") || "");
 
   if (!email || !password) return { error: "Email and password are required" };
+  if (!emailLooksValid(email)) return { error: INVALID_EMAIL_MSG };
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: describeAuthError(error, "login") };
@@ -113,6 +197,7 @@ export async function signupSendOtp(_prev: AuthState, formData: FormData): Promi
   const password = String(formData.get("password") || "");
 
   if (!email) return { error: "Email is required" };
+  if (!emailLooksValid(email)) return { error: INVALID_EMAIL_MSG };
   if (password.length < 6) {
     return { error: "Password must be at least 6 characters" };
   }

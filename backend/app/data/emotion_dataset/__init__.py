@@ -1,11 +1,18 @@
 """Curated emotion dataset loader with Hugging Face data.
 
-Training data primarily comes from two public Hugging Face datasets (fetched with
-the Python standard library — raw CSV / datasets-server paging — so no extra
+Training data comes from several public Hugging Face datasets (fetched with the
+Python standard library — raw CSV / datasets-server paging — so no extra
 dependencies are required):
 
-  - English : dair-ai/emotion       (Twitter emotion, train 16k / val 2k / test 2k)
-  - Myanmar : linnaein/burmese-emotion-dataset (3,475 rows, CSV)
+  - English : dair-ai/emotion          (Twitter emotion, train 16k / val 2k / test 2k)
+  - English : go_emotions-en           (Reddit, 43k+ train, 28-class incl. neutral)
+  - English : ISEAR English subset     (psychology narratives, 6.1k rows)
+  - Myanmar : linnaein/burmese-emotion-dataset   (3,475 rows, CSV)
+  - Myanmar : kalixlouiis/myanmar-sentiment-analysis (1,665 rows, CSV, neutral only)
+  - Myanmar : DatarrX/nava-rasa-myanmar-corpus    (450 rows, CSV)
+
+(All but dair-ai/emotion are the Hugging Face mirrors of data also distributed on
+Kaggle — GoEmotions, ISEAR, and the Burmese sentiment corpora.)
 
 HF labels are aligned to EmoChat's scheme {happy, sad, angry, fear, surprise, neutral}:
 
@@ -27,8 +34,8 @@ import json
 import logging
 import os
 import random
+import time
 import urllib.request
-from collections import defaultdict
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
@@ -41,11 +48,17 @@ EMOTIONS = ["happy", "sad", "angry", "fear", "surprise", "neutral"]
 NEUTRAL = "neutral"
 CORE_EMOTIONS = [e for e in EMOTIONS if e != NEUTRAL]
 
-HF_MAX_PER_EMOTION = int(os.getenv("HF_MAX_PER_EMOTION", "500"))
+HF_MAX_PER_EMOTION = int(os.getenv("HF_MAX_PER_EMOTION", "3000"))
+HF_MAX_NEUTRAL = int(os.getenv("HF_MAX_NEUTRAL", "1500"))
 HF_REFRESH = os.getenv("HF_REFRESH", "").strip().lower() in ("1", "true", "yes")
 
-HF_CACHE_FILE = DATA_DIR / "hf_dataset_cache.json"
+HF_CACHE_FILE = DATA_DIR / "hf_dataset_cache_v2.json"
 
+# A finished fetch must yield at least this many english rows; otherwise the cache
+# write is skipped so a rate-limited build never becomes a permanent degraded cache.
+HF_MIN_ENGLISH_ROWS = int(os.getenv("HF_MIN_ENGLISH_ROWS", "1500"))
+
+# Legacy id kept for reference; the loader now pages many sources (see ENGLISH_SOURCES).
 ENGLISH_HF_DATASET = "dair-ai/emotion"
 ENGLISH_LABEL_MAP = {
     "sadness": "sad",
@@ -54,6 +67,24 @@ ENGLISH_LABEL_MAP = {
     "anger": "angry",
     "fear": "fear",
     "surprise": "surprise",
+}
+
+# GoEmotions basic-Ekman label ids (config `simplified_ekman`, column `labels_ekman`).
+GOE_EKMAN_MAP = {
+    0: "angry",  # anger
+    2: "fear",  # fear
+    3: "happy",  # joy
+    4: "sad",  # sadness
+    5: "surprise",
+    6: "neutral",
+}
+
+# ISEAR emotion ids (column `EMOT`).
+ISEAR_MAP = {
+    1: "happy",  # joy
+    2: "fear",
+    3: "angry",
+    4: "sad",  # sadness
 }
 
 MYANMAR_HF_CSV = (
@@ -67,6 +98,32 @@ MYANMAR_LABEL_MAP = {
     "3": "angry",
     "4": "fear",
     "5": "surprise",
+}
+
+# Myanmar sentiment (3-class) — only Neutral is kept; Negative is too ambiguous
+# between sad/angry, and Positive product praise is not reliably "happy".
+KALIX_CSV = (
+    "https://huggingface.co/datasets/kalixlouiis/myanmar-sentiment-analysis/"
+    "resolve/main/myanmar_sentiment_dataset.csv"
+)
+KALIX_LABEL_MAP = {
+    "Neutral": "neutral",
+}
+
+# Classical nine-rasas corpus — disgust (ဝိဘစ္ဆရသ) is intentionally excluded.
+NAVA_CSV = (
+    "https://huggingface.co/datasets/DatarrX/nava-rasa-myanmar-corpus/"
+    "resolve/main/data.csv"
+)
+NAVA_RASA_MAP = {
+    "သိင်္ဂါရရသ": "happy",  # love / romance
+    "ဟဿရသ": "happy",  # humor
+    "ကရုဏာရသ": "sad",  # grief / pathos
+    "ရုဒ္ဒရသ": "angry",  # anger
+    "ဝီရရသ": "surprise",  # heroism (stirring)
+    "ဘယာနကရသ": "fear",  # terror
+    "အဗ္ဘုတရသ": "surprise",  # wonder
+    "သန္တရသ": "neutral",  # peace
 }
 
 # ---------------------------------------------------------------------------
@@ -139,6 +196,17 @@ MYANMAR_DATA: list[dict] = [
     {"text": "အားလုံး အဆင်ပြေလား", "emotion": "neutral"},
     {"text": "အချိန် ဘယ်နှစ်နာရီလဲ", "emotion": "neutral"},
     {"text": "ဒီနားမှာ ဆိုင်တစ်ဆိုင်ရှိတယ်", "emotion": "neutral"},
+    {"text": "ဒီကနေ့ ရာသီဥတုကောင်းတယ်", "emotion": "neutral"},
+    {"text": "ငါ ရုံးကို သွားနေတယ်", "emotion": "neutral"},
+    {"text": "ညစာစားဖို့ ဟင်းချက်နေတယ်", "emotion": "neutral"},
+    {"text": "ဒီစာအုပ်ကို ဖတ်ပြီးပြီ", "emotion": "neutral"},
+    {"text": "အလုပ်ပြီးရင် အိမ်ပြန်မယ်", "emotion": "neutral"},
+    {"text": "သူက ဆရာဝန်တစ်ယောက်ပါ", "emotion": "neutral"},
+    {"text": "ဒီလမ်းက စျေးဆီသွားတယ်", "emotion": "neutral"},
+    {"text": "မနက်ဖြန် အစည်းအဝေးရှိတယ်", "emotion": "neutral"},
+    {"text": "ငါ့ဖုန်းအားသွင်းထားတယ်", "emotion": "neutral"},
+    {"text": "ရေသန့်ဘူးဝယ်ပြီးပြီ", "emotion": "neutral"},
+    {"text": "တခြားအချိန်ကျရင် ပြောရအောင်", "emotion": "neutral"},
 ]
 
 # ---------------------------------------------------------------------------
@@ -211,6 +279,18 @@ ENGLISH_DATA: list[dict] = [
     {"text": "I am working right now", "emotion": "neutral"},
     {"text": "What time is the meeting", "emotion": "neutral"},
     {"text": "That sounds reasonable", "emotion": "neutral"},
+    {"text": "I'll call you back in an hour", "emotion": "neutral"},
+    {"text": "The train arrives at noon", "emotion": "neutral"},
+    {"text": "Please send the report by Friday", "emotion": "neutral"},
+    {"text": "I need to buy groceries later", "emotion": "neutral"},
+    {"text": "The meeting starts at three", "emotion": "neutral"},
+    {"text": "This document has been filed", "emotion": "neutral"},
+    {"text": "He works at the bank downtown", "emotion": "neutral"},
+    {"text": "I usually wake up at seven", "emotion": "neutral"},
+    {"text": "The shop closes at nine", "emotion": "neutral"},
+    {"text": "Can you pass the salt please", "emotion": "neutral"},
+    {"text": "I left my keys on the table", "emotion": "neutral"},
+    {"text": "We can discuss this tomorrow", "emotion": "neutral"},
 ]
 
 DATASET: list[dict] = MYANMAR_DATA + ENGLISH_DATA
@@ -219,15 +299,29 @@ DATASET: list[dict] = MYANMAR_DATA + ENGLISH_DATA
 def load_dataset() -> list[dict]:
     """Return the training dataset.
 
-    Prefers Hugging Face data (cached locally after the first fetch) for the five
-    non-neutral emotions, always keeps the curated neutral examples, and falls back
-    to the fully embedded curated set when Hugging Face is unavailable.
+    Prefers Hugging Face data (cached locally after the first fetch) for all six
+    emotions, always keeps the full embedded curated set, and falls back to the
+    embedded set when Hugging Face is unavailable.
     """
     rows = _load_composed()
     if not rows:
         logger.warning("HF load failed or empty — falling back to embedded dataset")
-        rows = [dict(d) for d in DATASET]
+        rows = _with_language([dict(d) for d in DATASET])
     return rows
+
+
+def _with_language(rows: list[dict]) -> list[dict]:
+    """Tag embedded rows (which have no language field) by script."""
+    from app.preprocessing.language_detector import detect_language
+
+    out: list[dict] = []
+    for r in rows:
+        if r.get("language"):
+            out.append(r)
+            continue
+        lang = detect_language(r.get("text", ""))
+        out.append({**r, "language": "english" if lang == "english" else "myanmar"})
+    return out
 
 
 def _load_composed() -> list[dict]:
@@ -237,8 +331,8 @@ def _load_composed() -> list[dict]:
     common demo inputs stay robust; the HF rows add real-world variety.
     """
     hf_rows = _load_hf_cached()
-    balanced = _balance(hf_rows, HF_MAX_PER_EMOTION)
-    return balanced + [dict(d) for d in DATASET]
+    balanced = _balance(hf_rows, HF_MAX_PER_EMOTION, HF_MAX_NEUTRAL)
+    return balanced + _with_language([dict(d) for d in DATASET])
 
 
 def _load_hf_cached() -> list[dict]:
@@ -252,6 +346,16 @@ def _load_hf_cached() -> list[dict]:
             pass
 
     rows = _build_hf_rows()
+    english_count = sum(1 for r in rows if r.get("language") == "english")
+    if english_count < HF_MIN_ENGLISH_ROWS:
+        # Refuse to persist a degraded cache (e.g. while HF rate-limits us),
+        # so the server never trains on a Myanmar-only build by accident.
+        logger.warning(
+            "skipping HF cache write: only %d english rows (need >= %d)",
+            english_count,
+            HF_MIN_ENGLISH_ROWS,
+        )
+        return rows
     try:
         HF_CACHE_FILE.write_text(
             json.dumps(rows, ensure_ascii=False), encoding="utf-8"
@@ -263,72 +367,94 @@ def _load_hf_cached() -> list[dict]:
 
 
 def _build_hf_rows() -> list[dict]:
+    """Pull every Hugging Face source (paged APIs + raw CSVs), then balance."""
     rows: list[dict] = []
-    rows.extend(_fetch_english())
-    rows.extend(_fetch_myanmar())
-    return _balance(rows, HF_MAX_PER_EMOTION)
+    for src in ENGLISH_SOURCES:
+        rows.extend(
+            _page_hf(
+                dataset=src["dataset"],
+                config=src["config"],
+                splits=src["splits"],
+                text_field=src["text_field"],
+                extract=src["extract"],
+            )
+        )
+    rows.extend(_fetch_csv(MYANMAR_HF_CSV, MYANMAR_LABEL_MAP))
+    if os.getenv("MYANMAR_INCLUDE_KALIX", "1").strip().lower() in ("1", "true", "yes"):
+        rows.extend(_fetch_csv(KALIX_CSV, KALIX_LABEL_MAP))
+    if os.getenv("MYANMAR_INCLUDE_NAVA", "1").strip().lower() in ("1", "true", "yes"):
+        rows.extend(_fetch_csv(NAVA_CSV, NAVA_RASA_MAP))
+    return _balance(rows, HF_MAX_PER_EMOTION, HF_MAX_NEUTRAL)
 
 
-def _balance(rows: list[dict], per_emotion: int) -> list[dict]:
-    """Deterministically cap each emotion class to at most `per_emotion` rows."""
-    grouped: dict[str, list[dict]] = defaultdict(list)
-    for r in rows:
-        grouped[r.get("emotion")].append(r)
+def _balance(rows: list[dict], per_emotion: int, neutral_cap: int) -> list[dict]:
+    """Deterministically cap each (language, emotion) class at its cap.
+
+    Balancing per language (instead of globally) keeps the Myanmar classes from
+    being flushed out by the much larger English sources, and keeps per-language
+    class sizes even so the n-gram priors do not drift toward the largest class.
+    """
     rng = random.Random(42)
     out: list[dict] = []
-    for emotion in CORE_EMOTIONS:
-        items = grouped.get(emotion, [])
-        if not items:
-            continue
-        rng.shuffle(items)
-        out.extend(items[:per_emotion])
+    for language in ("english", "myanmar"):
+        for emotion in EMOTIONS:
+            cap = neutral_cap if emotion == NEUTRAL else per_emotion
+            pool = [
+                r for r in rows
+                if r.get("language") == language and r.get("emotion") == emotion
+            ]
+            rng.shuffle(pool)
+            out.extend(pool[:cap])
     return out
 
 
-def _fetch_english() -> list[dict]:
-    """Page dair-ai/emotion via the HF datasets-server rows API.
+def _page_hf(
+    dataset: str,
+    config: str,
+    splits: tuple[str, ...],
+    text_field: str,
+    extract,
+) -> list[dict]:
+    """Page a Hugging Face dataset via the datasets-server rows API.
 
-    Stops early once every non-neutral class reaches HF_MAX_PER_EMOTION.
+    Stops early once every emotion reaches its cap.
     """
-    target = {e: 0 for e in CORE_EMOTIONS}
+    caps = {e: (HF_MAX_NEUTRAL if e == NEUTRAL else HF_MAX_PER_EMOTION) for e in EMOTIONS}
+    counts = {e: 0 for e in EMOTIONS}
     out: list[dict] = []
     seen: set[tuple[str, str]] = set()
 
-    for split in ("train", "validation", "test"):
+    for split in splits:
         offset = 0
         while True:
-            if all(v >= HF_MAX_PER_EMOTION for v in target.values()):
+            if all(counts[e] >= caps[e] for e in EMOTIONS):
                 return out
             url = (
                 "https://datasets-server.huggingface.co/rows"
-                f"?dataset={ENGLISH_HF_DATASET}&config=split&split={split}"
+                f"?dataset={dataset}&config={config}&split={split}"
                 f"&offset={offset}&length=100"
             )
             payload = _get_json(url)
             if payload is None:
-                return out
+                return out  # keep whatever pages we already collected
+            time.sleep(0.2)
             total = int(payload.get("num_rows_total") or 0)
-            names: list[str] | None = None
-            for feature in payload.get("features", []):
-                if feature.get("name") == "label" and isinstance(feature.get("type"), dict):
-                    names = feature["type"].get("names")
-                    break
             rows = payload.get("rows", [])
             if not rows:
                 return out
             for item in rows:
                 row = item.get("row", {})
-                text = str(row.get("text") or "").strip()
+                text = str(row.get(text_field) or "").strip()
                 if not text:
                     continue
-                emotion = _map_english_label(row.get("label"), names)
-                if emotion not in target:
+                emotion = extract(row)
+                if emotion not in EMOTIONS or counts[emotion] >= caps[emotion]:
                     continue
                 key = (text, emotion)
-                if key in seen or target[emotion] >= HF_MAX_PER_EMOTION:
+                if key in seen:
                     continue
                 seen.add(key)
-                target[emotion] += 1
+                counts[emotion] += 1
                 out.append({"text": text, "emotion": emotion, "language": "english"})
             offset += len(rows)
             if offset >= total:
@@ -336,38 +462,101 @@ def _fetch_english() -> list[dict]:
     return out
 
 
-def _map_english_label(label, names: list[str] | None) -> str | None:
-    if isinstance(label, int) and names:
+def _extract_dair(row: dict) -> str | None:
+    """dair-ai/emotion: `label` is an int index into the class-label names."""
+    value = row.get("label")
+    if isinstance(value, int):
+        # Feature names are the classic Twitter emotion label order.
+        names = ("sadness", "joy", "love", "anger", "fear", "surprise")
         try:
-            return ENGLISH_LABEL_MAP.get(names[label])
-        except (IndexError, TypeError):
+            return ENGLISH_LABEL_MAP.get(names[value])
+        except IndexError:
             return None
-    return ENGLISH_LABEL_MAP.get(label)
+    return ENGLISH_LABEL_MAP.get(value)
 
 
-def _fetch_myanmar() -> list[dict]:
-    """Download and parse the Myanmar emotion CSV from Hugging Face."""
+def _extract_goe(row: dict) -> str | None:
+    """go_emotions-en: `labels_ekman` is a list of basic-Emotion ids; keep single-label."""
+    value = row.get("labels_ekman")
+    if not isinstance(value, list) or len(value) != 1:
+        return None
+    return GOE_EKMAN_MAP.get(int(value[0]))
+
+
+def _extract_isear(row: dict) -> str | None:
+    """ISEAR: `EMOT` is the numeric emotion id; keep joy/fear/anger/sadness only."""
+    value = row.get("EMOT")
+    if not isinstance(value, int):
+        return None
+    return ISEAR_MAP.get(value)
+
+
+ENGLISH_SOURCES: list[dict] = [
+    {
+        "dataset": "dair-ai/emotion",
+        "config": "split",
+        "splits": ("train", "validation", "test"),
+        "text_field": "text",
+        "extract": _extract_dair,
+    },
+    {
+        "dataset": "AiLab-IMCS-UL/go_emotions-en",
+        "config": "simplified_ekman",
+        "splits": ("train", "validation", "test"),
+        "text_field": "text",
+        "extract": _extract_goe,
+    },
+    {
+        "dataset": "savalera/isear-from-original",
+        "config": "original",
+        "splits": ("train",),
+        "text_field": "SIT",
+        "extract": _extract_isear,
+    },
+]
+
+
+def _fetch_csv(url: str, label_map: dict[str, str]) -> list[dict]:
+    """Download and parse a `text,label` CSV from Hugging Face."""
     try:
-        with urllib.request.urlopen(MYANMAR_HF_CSV, timeout=30) as resp:
+        with urllib.request.urlopen(url, timeout=30) as resp:
             raw = resp.read()
     except (HTTPError, URLError, OSError):
         return []
-    reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
+    try:
+        reader = csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
+    except (UnicodeDecodeError, ValueError):
+        return []
     out: list[dict] = []
+    seen: set[str] = set()
     for entry in reader:
         text = (entry.get("text") or "").strip()
-        emotion = MYANMAR_LABEL_MAP.get((entry.get("label") or "").strip())
-        if text and emotion:
+        emotion = label_map.get((entry.get("label") or "").strip())
+        if text and emotion and text not in seen:
+            seen.add(text)
             out.append({"text": text, "emotion": emotion, "language": "myanmar"})
     return out
 
 
 def _get_json(url: str) -> dict | None:
-    try:
-        with urllib.request.urlopen(url, timeout=30) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except (HTTPError, URLError, OSError, ValueError):
-        return None
+    """GET JSON with retry/backoff on transient failures (rate limits, 5xx)."""
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(url, timeout=30) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except HTTPError as exc:
+            if exc.code == 429 or exc.code >= 500:
+                delay = 5 * (attempt + 1)
+                logger.warning("transient %s on %s — retrying in %ss", exc.code, url, delay)
+                time.sleep(delay)
+                continue
+            logger.warning("HTTP %s on %s", exc.code, url)
+            return None
+        except (URLError, OSError, ValueError):
+            time.sleep(5 * (attempt + 1))
+            continue
+    logger.warning("giving up on %s after retries", url)
+    return None
 
 
 def get_datasource_summary() -> dict:
@@ -378,9 +567,18 @@ def get_datasource_summary() -> dict:
     return {
         "source": "huggingface" if HF_CACHE_FILE.exists() else "embedded",
         "hf_max_per_emotion": HF_MAX_PER_EMOTION,
+        "hf_max_neutral": HF_MAX_NEUTRAL,
         "datasets": {
-            "english": "dair-ai/emotion",
-            "myanmar": "linnaein/burmese-emotion-dataset",
+            "english": [
+                "dair-ai/emotion",
+                "go_emotions-en (Ekman)",
+                "ISEAR English subset",
+            ],
+            "myanmar": [
+                "linnaein/burmese-emotion-dataset",
+                "kalixlouiis/myanmar-sentiment-analysis",
+                "DatarrX/nava-rasa-myanmar-corpus",
+            ],
         },
         "embedded_distribution": embedded,
     }
