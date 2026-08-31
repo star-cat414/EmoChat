@@ -14,9 +14,15 @@ class SpeechService:
     def transcribe(self, mime_type: str, audio_bytes: bytes, language: str | None = None) -> str:
         """Transcribe audio bytes to text via the Whisper API."""
         if not self.api_key:
-            raise RuntimeError("OPENAI_API_KEY not configured")
+            raise RuntimeError("OPENAI_API_KEY not configured in backend/.env")
 
-        from openai import OpenAI
+        try:
+            from openai import OpenAI
+        except ImportError as exc:  # pragma: no cover - environment issue
+            raise RuntimeError(
+                "OpenAI SDK not installed in the Python that runs the server "
+                "(run: pip install openai)"
+            ) from exc
 
         client = OpenAI(api_key=self.api_key)
         ext = _extension_for_mime(mime_type)

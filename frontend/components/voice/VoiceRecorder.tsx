@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Mic, Square } from "lucide-react";
+import { Mic, Square, TriangleAlert } from "lucide-react";
 
 import { createClient } from "@/lib/supabaseClient";
 import { voiceEmotion } from "@/lib/api";
@@ -21,6 +21,7 @@ export function VoiceRecorder({
   const supabase = useMemo(() => createClient(), []);
   const [recording, setRecording] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -100,7 +101,11 @@ export function VoiceRecorder({
     // Transcribe + analyze asynchronously (never blocks sending).
     (async () => {
       const result = await voiceEmotion(file);
-      if (!result) return;
+      if (!result.ok) {
+        setVoiceError(result.error);
+        return;
+      }
+      setVoiceError(null);
       const msgId = (msg as { id: string }).id;
       await supabase.from("messages").update({ transcript: result.transcript }).eq("id", msgId);
       const p = result.probabilities;
@@ -130,25 +135,33 @@ export function VoiceRecorder({
   }, []);
 
   return (
-    <div className="flex items-center gap-1">
-      <Button
-        type="button"
-        variant={recording ? "destructive" : "ghost"}
-        size="icon"
-        onClick={recording ? stop : start}
-        disabled={processing}
-        aria-label={recording ? "Stop recording" : "Record voice message"}
-        className={cn(recording && "animate-pulse")}
-      >
-        {processing ? (
-          <span className="h-3 w-3 rounded-full bg-current" />
-        ) : (
-          <Mic className="h-5 w-5" />
-        )}
-      </Button>
-      <span className="w-11 text-xs tabular-nums text-muted-foreground">
-        {recording ? formatDuration(elapsed) : processing ? "…" : ""}
-      </span>
+    <div className="flex flex-col items-end gap-1">
+      {voiceError && (
+        <p className="flex max-w-[260px] items-start gap-1 rounded-md bg-destructive/10 px-2 py-1 text-[11px] leading-snug text-destructive">
+          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>Voice AI unavailable: {voiceError}</span>
+        </p>
+      )}
+      <div className="flex items-center gap-1">
+        <Button
+          type="button"
+          variant={recording ? "destructive" : "ghost"}
+          size="icon"
+          onClick={recording ? stop : start}
+          disabled={processing}
+          aria-label={recording ? "Stop recording" : "Record voice message"}
+          className={cn(recording && "animate-pulse")}
+        >
+          {processing ? (
+            <span className="h-3 w-3 rounded-full bg-current" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
+        </Button>
+        <span className="w-11 text-xs tabular-nums text-muted-foreground">
+          {recording ? formatDuration(elapsed) : processing ? "…" : ""}
+        </span>
+      </div>
     </div>
   );
 }

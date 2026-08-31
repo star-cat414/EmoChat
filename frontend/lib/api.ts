@@ -55,10 +55,25 @@ export interface VoiceEmotionResult extends Prediction {
   transcript: string;
 }
 
+export type VoiceEmotionOutcome =
+  | ({ ok: true } & VoiceEmotionResult)
+  | { ok: false; error: string };
+
+/** Extract the `{detail}` message a FastAPI error returns, else a generic label. */
+async function extractError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { detail?: unknown };
+    if (typeof body?.detail === "string" && body.detail) return body.detail;
+  } catch {
+    // not JSON — fall through
+  }
+  return `request failed (HTTP ${res.status})`;
+}
+
 export async function voiceEmotion(
   file: File,
   previous_emotions?: string[]
-): Promise<VoiceEmotionResult | null> {
+): Promise<VoiceEmotionOutcome> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
@@ -73,10 +88,17 @@ export async function voiceEmotion(
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
+    if (!res.ok) return { ok: false, error: await extractError(res) };
+    const data = (await res.json()) as VoiceEmotionResult;
+    return { ok: true, ...data };
+  } catch (e) {
+    const aborted = e instanceof DOMException && e.name === "AbortError";
+    return {
+      ok: false,
+      error: aborted
+        ? "AI request timed out"
+        : "cannot reach the AI server (is the backend running?)",
+    };
   }
 }
 
@@ -117,10 +139,14 @@ export interface CallEmotionResult extends Prediction {
   transcript: string;
 }
 
+export type CallEmotionOutcome =
+  | ({ ok: true } & CallEmotionResult)
+  | { ok: false; error: string };
+
 export async function callEmotion(
   file: File,
   previous_emotions?: string[]
-): Promise<CallEmotionResult | null> {
+): Promise<CallEmotionOutcome> {
   try {
     const form = new FormData();
     form.append("file", file);
@@ -131,10 +157,11 @@ export async function callEmotion(
       method: "POST",
       body: form,
     });
-    if (!res.ok) return null;
-    return await res.json();
+    if (!res.ok) return { ok: false, error: await extractError(res) };
+    const data = (await res.json()) as CallEmotionResult;
+    return { ok: true, ...data };
   } catch {
-    return null;
+    return { ok: false, error: "cannot reach the AI server (is the backend running?)" };
   }
 }
 

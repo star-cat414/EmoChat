@@ -9,7 +9,7 @@ classification is done by N-Gram + HMM on the transcribed text, not a raw-audio 
 
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
 from app.config import settings
@@ -25,6 +25,20 @@ def _get_speech() -> SpeechService:
     if _speech is None:
         _speech = SpeechService(api_key=settings.OPENAI_API_KEY)
     return _speech
+
+
+def _transcribe(mime: str, audio: bytes) -> str:
+    """Transcribe audio, converting any STT failure into a readable 503."""
+    try:
+        return _get_speech().transcribe(mime, audio)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=f"Speech-to-text unavailable: {exc}") from exc
+    except Exception as exc:  # openai.* errors (rate limit, quota, auth, network...)
+        detail = str(exc) or type(exc).__name__
+        raise HTTPException(
+            status_code=503,
+            detail=f"Speech-to-text unavailable: {detail}",
+        ) from exc
 
 
 class TranscribeResponse(BaseModel):
@@ -46,7 +60,7 @@ class VoiceEmotionResponse(BaseModel):
 async def transcribe(request: Request, file: UploadFile = File(...)) -> TranscribeResponse:
     audio = await file.read()
     mime = file.content_type or "audio/webm"
-    transcript = _get_speech().transcribe(mime, audio)
+    transcript = _transcribe(mime, audio)
     return TranscribeResponse(transcript=transcript)
 
 
@@ -63,7 +77,7 @@ async def voice_emotion(
     if not transcript:
         audio = await file.read()
         mime = file.content_type or "audio/webm"
-        transcript = _get_speech().transcribe(mime, audio)
+        transcript = _transcribe(mime, audio)
 
     prev: list[str] = [e.strip() for e in previous_emotions.split(",") if e.strip()] or None
     result = model.predict(text=transcript, previous_emotions=prev)

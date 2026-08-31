@@ -104,28 +104,32 @@ export function useVoiceCall({ conversationId, currentUserId, otherUserId }: Use
           const blob = new Blob(chunks, { type: "audio/webm" });
           const file = new File([blob], `call-${Date.now()}.webm`, { type: "audio/webm" });
           const result = await callEmotion(file, emotionBalancerRef.current);
-          if (result && statusRef.current === "active") {
-            const update: CallEmotionUpdate = {
-              emotion: result.emotion as EmotionLabel,
-              confidence: result.confidence,
-              timestamp: Date.now(),
-              transcript: result.transcript,
-            };
-            emotionBalancerRef.current.push(result.emotion as EmotionLabel);
-            setCurrentEmotion(update);
-            setEmotionTimeline((prev) => [...prev, update]);
-            supabaseRef.current.from("voice_emotion_predictions").insert({
-              call_id: callIdRef.current,
-              user_id: currentUserId,
-              transcript: result.transcript,
-              predicted_emotion: result.emotion as EmotionLabel,
-              happy_probability: result.probabilities.happy,
-              sad_probability: result.probabilities.sad,
-              angry_probability: result.probabilities.angry,
-              fear_probability: result.probabilities.fear,
-              surprise_probability: result.probabilities.surprise,
-              neutral_probability: result.probabilities.neutral,
-            });
+          if (result.ok) {
+            if (statusRef.current === "active") {
+              const update: CallEmotionUpdate = {
+                emotion: result.emotion as EmotionLabel,
+                confidence: result.confidence,
+                timestamp: Date.now(),
+                transcript: result.transcript,
+              };
+              emotionBalancerRef.current.push(result.emotion as EmotionLabel);
+              setCurrentEmotion(update);
+              setEmotionTimeline((prev) => [...prev, update]);
+              supabaseRef.current.from("voice_emotion_predictions").insert({
+                call_id: callIdRef.current,
+                user_id: currentUserId,
+                transcript: result.transcript,
+                predicted_emotion: result.emotion as EmotionLabel,
+                happy_probability: result.probabilities.happy,
+                sad_probability: result.probabilities.sad,
+                angry_probability: result.probabilities.angry,
+                fear_probability: result.probabilities.fear,
+                surprise_probability: result.probabilities.surprise,
+                neutral_probability: result.probabilities.neutral,
+              });
+            }
+          } else {
+            setError(`Voice AI unavailable: ${result.error}`);
           }
         }
         chunks.length = 0;

@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi import APIRouter, File, Request, UploadFile
 from pydantic import BaseModel
 
-from app.api.voice import _get_speech
+from app.api.voice import _transcribe
 
 router = APIRouter()
 
@@ -35,7 +35,7 @@ async def call_emotion(
 
     audio = await file.read()
     mime = file.content_type or "audio/webm"
-    transcript = _get_speech().transcribe(mime, audio)
+    transcript = _transcribe(mime, audio)
 
     prev: list[str] = [e.strip() for e in previous_emotions.split(",") if e.strip()] or None
     result = model.predict(text=transcript, previous_emotions=prev)
