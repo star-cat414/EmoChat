@@ -10,6 +10,7 @@ classification is done by N-Gram + HMM on the transcribed text, not a raw-audio 
 from __future__ import annotations
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from app.config import settings
@@ -23,7 +24,10 @@ _speech: SpeechService | None = None
 def _get_speech() -> SpeechService:
     global _speech
     if _speech is None:
-        _speech = SpeechService(api_key=settings.OPENAI_API_KEY)
+        _speech = SpeechService(
+            api_key=settings.OPENAI_API_KEY,
+            local_fallback=settings.STT_LOCAL_FALLBACK,
+        )
     return _speech
 
 
@@ -70,7 +74,7 @@ class VoiceEmotionResponse(BaseModel):
 async def transcribe(request: Request, file: UploadFile = File(...)) -> TranscribeResponse:
     audio = await file.read()
     mime = file.content_type or "audio/webm"
-    transcript = _transcribe(mime, audio)
+    transcript = await run_in_threadpool(_transcribe, mime, audio)
     return TranscribeResponse(transcript=transcript)
 
 
@@ -87,7 +91,7 @@ async def voice_emotion(
     if not transcript:
         audio = await file.read()
         mime = file.content_type or "audio/webm"
-        transcript = _transcribe(mime, audio)
+        transcript = await run_in_threadpool(_transcribe, mime, audio)
 
     prev: list[str] = [e.strip() for e in previous_emotions.split(",") if e.strip()] or None
     result = model.predict(text=transcript, previous_emotions=prev)

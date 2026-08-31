@@ -7,6 +7,7 @@ to get an N-Gram + HMM emotion prediction. Updates are periodic, not continuous.
 from __future__ import annotations
 
 from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 
 from app.api.voice import _transcribe
@@ -35,7 +36,7 @@ async def call_emotion(
 
     audio = await file.read()
     mime = file.content_type or "audio/webm"
-    transcript = _transcribe(mime, audio)
+    transcript = await run_in_threadpool(_transcribe, mime, audio)
 
     prev: list[str] = [e.strip() for e in previous_emotions.split(",") if e.strip()] or None
     result = model.predict(text=transcript, previous_emotions=prev)

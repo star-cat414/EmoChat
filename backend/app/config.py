@@ -16,6 +16,7 @@ class Settings:
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     ALLOWED_ORIGIN: list[str] = _env_list("ALLOWED_ORIGIN", "https://emochat-frontend.vercel.app")
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    STT_LOCAL_FALLBACK: bool = os.getenv("STT_LOCAL_FALLBACK", "1").strip().lower() in ("1", "true", "yes")
     PORT: int = int(os.getenv("PORT", "8000"))
 
     @property
