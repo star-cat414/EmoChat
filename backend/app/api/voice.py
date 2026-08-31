@@ -35,6 +35,16 @@ def _transcribe(mime: str, audio: bytes) -> str:
         raise HTTPException(status_code=503, detail=f"Speech-to-text unavailable: {exc}") from exc
     except Exception as exc:  # openai.* errors (rate limit, quota, auth, network...)
         detail = str(exc) or type(exc).__name__
+        if "credit_balance_exhausted" in detail or "insufficient_quota" in detail:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Speech-to-text is disabled: the OpenAI account has no credits "
+                    "left. Add credits at https://platform.openai.com/settings/"
+                    "organization/billing/ (or set a valid OPENAI_API_KEY in "
+                    "backend/.env)."
+                ),
+            ) from exc
         raise HTTPException(
             status_code=503,
             detail=f"Speech-to-text unavailable: {detail}",
