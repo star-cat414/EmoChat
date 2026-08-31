@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import analytics, calls, emotion, voice
+from app.api import analytics, emotion, voice
 from app.config import settings
 
 logging.basicConfig(
@@ -45,7 +45,6 @@ app.add_middleware(
 app.include_router(emotion.router, prefix="/api", tags=["emotion"])
 app.include_router(voice.router, prefix="/api", tags=["voice"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
-app.include_router(calls.router, prefix="/api", tags=["calls"])
 
 
 @app.get("/", include_in_schema=False)

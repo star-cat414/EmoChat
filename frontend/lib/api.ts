@@ -135,36 +135,6 @@ export async function fetchModelEvaluation(): Promise<ModelEvaluation | null> {
   }
 }
 
-export interface CallEmotionResult extends Prediction {
-  transcript: string;
-}
-
-export type CallEmotionOutcome =
-  | ({ ok: true } & CallEmotionResult)
-  | { ok: false; error: string };
-
-export async function callEmotion(
-  file: File,
-  previous_emotions?: string[]
-): Promise<CallEmotionOutcome> {
-  try {
-    const form = new FormData();
-    form.append("file", file);
-    if (previous_emotions?.length) {
-      form.append("previous_emotions", previous_emotions.join(","));
-    }
-    const res = await fetch(`${API_URL}/api/calls/emotion`, {
-      method: "POST",
-      body: form,
-    });
-    if (!res.ok) return { ok: false, error: await extractError(res) };
-    const data = (await res.json()) as CallEmotionResult;
-    return { ok: true, ...data };
-  } catch {
-    return { ok: false, error: "cannot reach the AI server (is the backend running?)" };
-  }
-}
-
 export interface NGramSuggestion {
   word: string;
   probability: number;

@@ -5,7 +5,6 @@ import {
   Brain,
   Languages,
   Mic,
-  Phone,
   BarChart3,
   ArrowRight,
   Sparkles,
@@ -169,7 +168,7 @@ export default function HomePage() {
         <FeatureCard tone="bg-violet-100 text-violet-600" icon={<Brain className="h-5 w-5" />} title="N-Gram + HMM" description="Emotion intelligence powered by classical language models, not black boxes." />
         <FeatureCard tone="bg-sky-100 text-sky-600" icon={<Languages className="h-5 w-5" />} title="Myanmar Language" description="First-class Myanmar Unicode support alongside English and mixed text." />
         <FeatureCard tone="bg-rose-100 text-rose-600" icon={<Mic className="h-5 w-5" />} title="Voice Messages" description="Record, transcribe, and analyze voice messages with emotion insights." />
-        <FeatureCard tone="bg-emerald-100 text-emerald-600" icon={<Phone className="h-5 w-5" />} title="Voice Calls" description="Simple audio calls with live emotion analysis on your conversation." />
+        <FeatureCard tone="bg-emerald-100 text-emerald-600" icon={<ShieldCheck className="h-5 w-5" />} title="Offline & Private" description="Local speech transcription that works even when cloud AI is unavailable." />
         <FeatureCard tone="bg-fuchsia-100 text-fuchsia-600" icon={<BarChart3 className="h-5 w-5" />} title="Emotion Analytics" description="Per-conversation and per-person emotion trends and distributions." />
       </section>
 

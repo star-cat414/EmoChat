@@ -124,61 +124,6 @@ export interface Database {
         Update: {};
         Relationships: [];
       };
-      voice_calls: {
-        Row: {
-          id: string;
-          conversation_id: string;
-          caller_id: string;
-          receiver_id: string;
-          started_at: string | null;
-          ended_at: string | null;
-          status: string;
-        };
-        Insert: {
-          conversation_id: string;
-          caller_id: string;
-          receiver_id: string;
-          started_at?: string | null;
-          ended_at?: string | null;
-          status: string;
-        };
-        Update: {
-          started_at?: string | null;
-          ended_at?: string | null;
-          status?: string;
-        };
-        Relationships: [];
-      };
-      voice_emotion_predictions: {
-        Row: {
-          id: string;
-          call_id: string | null;
-          user_id: string;
-          transcript: string | null;
-          predicted_emotion: EmotionLabel;
-          happy_probability: number;
-          sad_probability: number;
-          angry_probability: number;
-          fear_probability: number;
-          surprise_probability: number;
-          neutral_probability: number;
-          timestamp: string;
-        };
-        Insert: {
-          call_id: string | null;
-          user_id: string;
-          transcript?: string | null;
-          predicted_emotion: EmotionLabel;
-          happy_probability: number;
-          sad_probability: number;
-          angry_probability: number;
-          fear_probability: number;
-          surprise_probability: number;
-          neutral_probability: number;
-        };
-        Update: {};
-        Relationships: [];
-      };
     };
     Views: {};
     Functions: {

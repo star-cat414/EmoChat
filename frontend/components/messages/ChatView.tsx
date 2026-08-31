@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, Send, Paperclip, Smile, ChevronRight, Phone } from "lucide-react";
+import { ArrowLeft, Send, Paperclip, Smile, ChevronRight } from "lucide-react";
 
 import { createClient } from "@/lib/supabaseClient";
 import { predictEmotion } from "@/lib/api";
 import type { EmotionLabel, Prediction } from "@/lib/emotions";
 import { MessageBubble, type MessageBubbleData } from "@/components/messages/MessageBubble";
 import { VoiceRecorder } from "@/components/voice/VoiceRecorder";
-import { VoiceCallPanel } from "@/components/calls/VoiceCallPanel";
 import { NGramAutocomplete } from "@/components/chat/NGramAutocomplete";
 import { Avatar, initialsOf } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -301,22 +300,7 @@ export function ChatView({
           Mood
           <ChevronRight className="h-4 w-4" />
         </a>
-        <button
-          type="button"
-          aria-label="Call"
-          className="hidden h-10 w-10 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex"
-        >
-          <Phone className="h-4 w-4" />
-        </button>
       </div>
-
-      {/* Voice calls */}
-      <VoiceCallPanel
-        conversationId={conversationId}
-        currentUserId={currentUserId}
-        otherUserId={other.id}
-        otherUserName={other.username}
-      />
 
       {/* Messages */}
       <div
