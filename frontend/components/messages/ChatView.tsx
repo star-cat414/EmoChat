@@ -278,7 +278,7 @@ export function ChatView({
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-14rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:h-[calc(100vh-10rem)]">
+    <div className="mx-auto flex h-[calc(100vh-16rem)] max-w-4xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-sm md:h-[calc(100vh-10rem)]">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
         <Button variant="ghost" size="icon" onClick={() => router.push("/dashboard")} className="md:hidden" aria-label="Back">
@@ -321,7 +321,7 @@ export function ChatView({
       {/* Messages */}
       <div
         ref={scrollRef}
-        className="glass-scroll flex-1 space-y-2 overflow-y-auto px-4 py-5"
+        className="glass-scroll flex-1 space-y-1.5 overflow-y-auto px-2.5 py-3 sm:px-4 sm:py-4"
       >
         {loading ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Loading…</p>
@@ -354,7 +354,7 @@ export function ChatView({
       </div>
 
       {/* Composer */}
-      <div className="border-t border-border bg-background px-4 py-3">
+      <div className="border-t border-border bg-background px-2.5 py-2 sm:px-4 sm:py-3">
         <div className="mx-auto max-w-2xl">
           <AnimatePresence>
             {activeWord && (
@@ -365,7 +365,7 @@ export function ChatView({
               />
             )}
           </AnimatePresence>
-          <div className="flex items-end gap-2 rounded-2xl border border-border bg-muted px-3 py-2 focus-within:border-primary">
+          <div className="flex items-end gap-1.5 rounded-xl border border-border bg-muted px-2 py-1.5 sm:rounded-2xl sm:px-3 sm:py-2 focus-within:border-primary">
             <VoiceRecorder
               conversationId={conversationId}
               currentUserId={currentUserId}
@@ -375,36 +375,36 @@ export function ChatView({
                 )
               }
             />
-            <button
-              type="button"
-              aria-label="Attach"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Paperclip className="h-4 w-4" />
-            </button>
             <textarea
               ref={textareaRef}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Type a message…"
+              placeholder="Message…"
               rows={1}
-              className="max-h-32 flex-1 resize-none bg-transparent px-1 py-2 text-[15px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
+              className="max-h-28 flex-1 resize-none bg-transparent px-1 py-1 text-[13px] sm:text-[14px] text-foreground placeholder:text-muted-foreground focus-visible:outline-none"
             />
             <button
               type="button"
               aria-label="Emoji"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
+              className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
             >
               <Smile className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              aria-label="Attach"
+              className="hidden sm:flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Paperclip className="h-4 w-4" />
             </button>
             <button
               onClick={sendMessage}
               disabled={sending || !text.trim()}
               aria-label="Send"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-40 disabled:hover:bg-primary/90"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-white shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-40 disabled:hover:bg-primary/90 sm:h-9 sm:w-9"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </button>
           </div>
         </div>
