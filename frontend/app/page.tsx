@@ -1,11 +1,6 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
   MessageCircle,
-  Brain,
-  Languages,
-  Mic,
-  BarChart3,
   ArrowRight,
   Sparkles,
   ShieldCheck,
@@ -13,7 +8,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { EmotionBackground } from "@/components/emotion/EmotionBackground";
 import { EMOTIONS, EMOTION_META } from "@/lib/emotions";
 import { cn } from "@/lib/utils";
@@ -47,6 +41,9 @@ export default function HomePage() {
             </span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/about">
+              <Button variant="ghost">About</Button>
+            </Link>
             <Link href="/login">
               <Button variant="ghost">Login</Button>
             </Link>
@@ -162,16 +159,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="mx-auto grid w-full max-w-6xl grid-cols-1 gap-4 px-6 pb-20 sm:grid-cols-2 lg:grid-cols-3">
-        <FeatureCard tone="bg-indigo-100 text-indigo-600" icon={<MessageCircle className="h-5 w-5" />} title="1-to-1 Messaging" description="Private, real-time conversations that feel fast and familiar." />
-        <FeatureCard tone="bg-violet-100 text-violet-600" icon={<Brain className="h-5 w-5" />} title="N-Gram + HMM" description="Emotion intelligence powered by classical language models, not black boxes." />
-        <FeatureCard tone="bg-sky-100 text-sky-600" icon={<Languages className="h-5 w-5" />} title="Myanmar Language" description="First-class Myanmar Unicode support alongside English and mixed text." />
-        <FeatureCard tone="bg-rose-100 text-rose-600" icon={<Mic className="h-5 w-5" />} title="Voice Messages" description="Record, transcribe, and analyze voice messages with emotion insights." />
-        <FeatureCard tone="bg-emerald-100 text-emerald-600" icon={<ShieldCheck className="h-5 w-5" />} title="Offline & Private" description="Local speech transcription that works even when cloud AI is unavailable." />
-        <FeatureCard tone="bg-fuchsia-100 text-fuchsia-600" icon={<BarChart3 className="h-5 w-5" />} title="Emotion Analytics" description="Per-conversation and per-person emotion trends and distributions." />
-      </section>
-
       {/* CTA band */}
       <section className="mx-auto w-full max-w-6xl px-6 pb-20">
         <div className="rounded-3xl border border-border bg-card px-6 py-14 text-center shadow-sm sm:px-12">
@@ -204,27 +191,5 @@ export default function HomePage() {
         </span>
       </footer>
     </main>
-  );
-}
-
-function FeatureCard({
-  icon,
-  title,
-  description,
-  tone,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-  tone: string;
-}) {
-  return (
-    <Card className="p-6 transition-all hover:-translate-y-0.5 hover:shadow-md">
-      <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${tone}`}>
-        {icon}
-      </div>
-      <h3 className="mb-1 font-semibold">{title}</h3>
-      <p className="text-sm text-muted-foreground">{description}</p>
-    </Card>
   );
 }
