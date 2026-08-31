@@ -4,8 +4,8 @@
 -- ============================================================
 
 -- Remove from the realtime publication before dropping.
-alter publication supabase_realtime drop table if exists public.voice_emotion_predictions;
-alter publication supabase_realtime drop table if exists public.voice_calls;
+alter publication supabase_realtime drop table public.voice_emotion_predictions;
+alter publication supabase_realtime drop table public.voice_calls;
 
 -- Drop child first (FK depends on voice_calls).
 drop table if exists public.voice_emotion_predictions;
