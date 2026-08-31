@@ -74,6 +74,7 @@ export function ChatView({
 
   // Track a stable ordered list of past emotions for HMM context.
   const emotionsOrder = useRef<EmotionLabel[]>([]);
+  const orderedIds = useRef<Set<string>>(new Set());
 
   const predictionToRecord = useCallback((p: Prediction): EmotionRow => {
     const { happy, sad, angry, fear, surprise, neutral } = p.probabilities;
@@ -87,6 +88,33 @@ export function ChatView({
       surprise_probability: surprise,
       neutral_probability: neutral,
     };
+  }, []);
+
+  const rowToPrediction = useCallback((r: EmotionRow & { id?: string }): Prediction => {
+    const probabilities = {
+      happy: r.happy_probability,
+      sad: r.sad_probability,
+      angry: r.angry_probability,
+      fear: r.fear_probability,
+      surprise: r.surprise_probability,
+      neutral: r.neutral_probability,
+    };
+    return {
+      emotion: r.predicted_emotion,
+      confidence: Math.max(...Object.values(probabilities)),
+      probabilities,
+      language: "auto",
+      model: "NGram-HMM",
+      model_version: "1.0",
+    };
+  }, []);
+
+  const mergePrediction = useCallback((prediction: Prediction, messageId: string) => {
+    setEmotions((prev) => ({ ...prev, [messageId]: prediction }));
+    if (!orderedIds.current.has(messageId)) {
+      orderedIds.current.add(messageId);
+      emotionsOrder.current = [...emotionsOrder.current, prediction.emotion];
+    }
   }, []);
 
   const load = useCallback(async () => {
@@ -107,33 +135,15 @@ export function ChatView({
     const order: EmotionLabel[] = [];
     for (const r of (preds as (EmotionRow & { id: string })[]) ?? []) {
       if (!r.message_id) continue;
-      map[r.message_id] = {
-        emotion: r.predicted_emotion,
-        confidence: Math.max(
-          r.happy_probability,
-          r.sad_probability,
-          r.angry_probability,
-          r.fear_probability,
-          r.surprise_probability,
-          r.neutral_probability
-        ),
-        probabilities: {
-          happy: r.happy_probability,
-          sad: r.sad_probability,
-          angry: r.angry_probability,
-          fear: r.fear_probability,
-          surprise: r.surprise_probability,
-          neutral: r.neutral_probability,
-        },
-        language: "auto",
-        model: "NGram-HMM",
-        model_version: "1.0",
-      };
-      order.push(r.predicted_emotion);
+      map[r.message_id] = rowToPrediction(r);
+      if (!orderedIds.current.has(r.message_id)) {
+        orderedIds.current.add(r.message_id);
+        order.push(r.predicted_emotion);
+      }
     }
     setEmotions(map);
     emotionsOrder.current = order;
-  }, [supabase, conversationId]);
+  }, [supabase, conversationId, rowToPrediction]);
 
   useEffect(() => {
     load();
@@ -154,12 +164,46 @@ export function ChatView({
           });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` },
+        (payload) => {
+          const upd = payload.new as MessageBubbleData;
+          setMessages((prev) => prev.map((m) => (m.id === upd.id ? { ...m, ...upd } : m)));
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [supabase, conversationId]);
+
+  // Realtime: reflect emotion predictions the moment they land (voice messages
+  // insert predictions asynchronously, after the message itself appears).
+  useEffect(() => {
+    const channel = supabase
+      .channel(`emotions:${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "emotion_predictions",
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as EmotionRow & { id?: string };
+          if (!row.message_id) return;
+          mergePrediction(rowToPrediction(row), row.message_id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, conversationId, mergePrediction, rowToPrediction]);
 
   // Auto-scroll to bottom on new messages.
   useEffect(() => {
@@ -189,13 +233,12 @@ export function ChatView({
           .from("emotion_predictions")
           .insert({ ...record, user_id: currentUserId, conversation_id: conversationId });
 
-        setEmotions((prev) => ({ ...prev, [messageId]: prediction }));
-        emotionsOrder.current = [...emotionsOrder.current, prediction.emotion];
+        mergePrediction(prediction, messageId);
       } finally {
         setAnalyzing(false);
       }
     },
-    [conversationId, currentUserId, supabase, predictionToRecord]
+    [conversationId, currentUserId, supabase, predictionToRecord, mergePrediction]
   );
 
   const sendMessage = useCallback(async () => {
