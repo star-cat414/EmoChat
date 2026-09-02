@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { MessageCircle, Sparkles } from "lucide-react";
+import { MessageCircle, Sparkles, ArrowLeft } from "lucide-react";
 
 import { signupSendOtp, signupVerifyOtp } from "@/app/auth/actions";
 import { Input } from "@/components/ui/input";
 import { EmotionBackground } from "@/components/emotion/EmotionBackground";
+import { AuthNav } from "@/components/layout/AuthNav";
 
 export default function RegisterPage() {
   const [step, setStep] = useState<"form" | "code">("form");
@@ -46,10 +47,19 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <EmotionBackground />
-      <div className="relative z-10 w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center text-center">
+    <div className="flex min-h-screen flex-col bg-background">
+      <AuthNav mode="register" />
+      <main className="relative flex flex-1 items-center justify-center bg-background px-4 py-10">
+        <EmotionBackground />
+        <div className="relative z-10 w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-4 -ml-2 inline-flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+          <div className="mb-6 flex flex-col items-center text-center">
           <span className="brand-glow mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-brand text-white">
             <MessageCircle className="h-7 w-7" />
           </span>
@@ -164,6 +174,7 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+    </div>
   );
 }
