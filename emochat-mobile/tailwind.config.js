@@ -1,0 +1,51 @@
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./App.{js,jsx,ts,tsx}', './app/**/*.{js,jsx,ts,tsx}', './components/**/*.{js,jsx,ts,tsx}', './lib/**/*.{js,jsx,ts,tsx}'],
+  presets: [require('nativewind/preset')],
+  theme: {
+    extend: {
+      colors: {
+        background: '#f8fafc',
+        foreground: '#0f172a',
+        muted: '#f1f5f9',
+        'muted-foreground': '#64748b',
+        border: '#e2e8f0',
+        card: '#ffffff',
+        'card-foreground': '#0f172a',
+        primary: '#6366f1',
+        'primary-foreground': '#ffffff',
+        accent: '#eef2ff',
+        'accent-foreground': '#4f46e5',
+        ring: '#6366f1',
+        destructive: '#ef4444',
+        success: '#10b981',
+        'success-foreground': '#ffffff',
+        brand: {
+          from: '#6366f1',
+          mid: '#8b5cf6',
+          to: '#d946ef',
+        },
+        emotion: {
+          happy: '#f59e0b',
+          'happy-bg': '#fef3c7',
+          sad: '#3b82f6',
+          'sad-bg': '#dbeafe',
+          angry: '#f43f5e',
+          'angry-bg': '#ffe4e6',
+          fear: '#8b5cf6',
+          'fear-bg': '#ede9fe',
+          surprise: '#f97316',
+          'surprise-bg': '#ffedd5',
+          neutral: '#64748b',
+          'neutral-bg': '#e2e8f0',
+        },
+      },
+      borderRadius: {
+        lg: '0.75rem',
+        md: '0.5rem',
+        sm: '0.375rem',
+      },
+    },
+  },
+  plugins: [],
+};
